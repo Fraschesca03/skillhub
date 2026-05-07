@@ -1,0 +1,16 @@
+# Secrets et configuration locale
+.env
+.env.local
+.env.*.local
+
+# Fichiers IDE
+.idea/
+.vscode/
+*.iml
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs locaux
+*.log

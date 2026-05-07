@@ -1,0 +1,164 @@
+# docker-compose.yml UNIFIE — Orchestre les 2 microservices
+# Examen Bloc 03 CDWFS
+#
+# Structure requise :
+#   ./docker-compose.yml          (ce fichier)
+#   ./skillhub_CICD_backend/      (projet Laravel + son Dockerfile)
+#   ./authentification/           (projet Spring Boot + son Dockerfile)
+#
+# Lancement : docker compose up --build
+
+services:
+
+  
+  # SKILLHUB API — Laravel 12 (metier)
+  
+  api:
+    build:
+      context: ./skillhub_CICD_backend        # ← dossier Laravel
+      dockerfile: Dockerfile                  # ← son Dockerfile
+      target: runtime
+    image: ghcr.io/fraschesca03/skillhub-api:latest
+    container_name: skillhub-api
+    restart: unless-stopped
+    environment:
+      APP_NAME: ${APP_NAME:-SkillHub}
+      APP_ENV: ${APP_ENV:-local}
+      APP_KEY: ${APP_KEY}
+      APP_DEBUG: ${APP_DEBUG:-true}
+      APP_URL: ${APP_URL:-http://localhost}
+      DB_CONNECTION: mysql
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_DATABASE: ${DB_DATABASE:-skillhub}
+      DB_USERNAME: ${DB_USERNAME:-skillhub}
+      DB_PASSWORD: ${DB_PASSWORD}
+      MONGO_HOST: mongodb
+      MONGO_PORT: 27017
+      MONGO_DATABASE: ${MONGO_DATABASE:-skillhub_messages}
+      MONGO_USERNAME: ${MONGO_ROOT_USERNAME:-root}
+      MONGO_PASSWORD: ${MONGO_ROOT_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_TTL: ${JWT_TTL:-60}
+      AUTH_SERVICE_URL: http://skillhub-auth:8080
+      APP_CORS_ORIGIN: ${APP_CORS_ORIGIN:-http://localhost:5173}
+      CACHE_STORE: database
+      SESSION_DRIVER: database
+      QUEUE_CONNECTION: database
+    depends_on:
+      mysql:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
+    networks:
+      - skillhub-network
+    volumes:
+      - api-storage:/var/www/html/storage
+      - api-media:/var/www/html/public/images
+
+  
+  # SKILLHUB AUTH — Spring Boot 3.5 (authentification SSO)
+  
+  auth-service:
+    build:
+      context: ./authentification             # ← dossier Spring Boot
+      dockerfile: Dockerfile                  # ← son Dockerfile
+      target: runtime
+    image: ghcr.io/fraschesca03/skillhub-auth:latest
+    container_name: skillhub-auth
+    restart: unless-stopped
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/skillhub?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      SPRING_DATASOURCE_USERNAME: ${DB_USERNAME:-skillhub}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
+      APP_MASTER_KEY: ${APP_MASTER_KEY}
+      JWT_SECRET: ${JWT_SECRET}
+    ports:
+      - "8080:8080"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - skillhub-network
+
+  
+  # NGINX — Reverse proxy pour Laravel
+  
+  nginx:
+    image: nginx:1.25-alpine
+    container_name: skillhub-nginx
+    restart: unless-stopped
+    ports:
+      - "${NGINX_HTTP_PORT:-80}:80"
+    volumes:
+      - ./skillhub_CICD_backend/docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - api-media:/var/www/html/public/images:ro
+    depends_on:
+      - api
+    networks:
+      - skillhub-network
+
+  
+  # MYSQL 8 — Base partagee entre Laravel et Spring Boot
+  
+  mysql:
+    image: mysql:8.0
+    container_name: skillhub-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${DB_DATABASE:-skillhub}
+      MYSQL_USER: ${DB_USERNAME:-skillhub}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - mysql-data:/var/lib/mysql
+    networks:
+      - skillhub-network
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u root -p$$MYSQL_ROOT_PASSWORD --silent 2>/dev/null"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+
+  
+  # MONGODB 6 — Messages + ActivityLog (uniquement utilise par Laravel)
+  
+  mongodb:
+    image: mongo:6.0
+    container_name: skillhub-mongodb
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USERNAME:-root}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD}
+      MONGO_INITDB_DATABASE: ${MONGO_DATABASE:-skillhub_messages}
+    volumes:
+      - mongodb-data:/data/db
+    networks:
+      - skillhub-network
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.runCommand('ping').ok", "--quiet"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+
+# RESEAU INTERNE ISOLE — tous les services communiquent via ce reseau
+networks:
+  skillhub-network:
+    driver: bridge
+    name: skillhub-network
+
+
+# VOLUMES PERSISTENTS
+
+volumes:
+  mysql-data:
+    name: skillhub-mysql-data
+  mongodb-data:
+    name: skillhub-mongodb-data
+  api-storage:
+    name: skillhub-api-storage
+  api-media:
+    name: skillhub-api-media
