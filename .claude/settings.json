@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(php artisan *)",
+      "Bash(composer install *)",
+      "Bash(composer dump-autoload *)",
+      "Bash(composer show *)",
+      "Bash(vendor/bin/pint)",
+      "Bash(vendor/bin/pint --test)"
+    ]
+  }
+}

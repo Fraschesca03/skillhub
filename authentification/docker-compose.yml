@@ -1,0 +1,36 @@
+services:
+
+  # Service d'authentification Spring Boot
+  # Se connecte à la DB MySQL de SkillHub via le réseau externe
+  auth-service:
+    build:
+      context: .
+      target: runtime
+    image: skillhub-auth:latest
+    container_name: skillhub-auth
+    restart: unless-stopped
+    environment:
+      # DB partagée avec Laravel (hostname 'mysql' résolu via le réseau skillhub-network)
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/skillhub?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      SPRING_DATASOURCE_USERNAME: skillhub
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:-skillhub_pass}
+      # Secrets partagés (Master Key AES + JWT_SECRET)
+      APP_MASTER_KEY: ${APP_MASTER_KEY}
+      JWT_SECRET: ${JWT_SECRET}
+    ports:
+      - "8080:8080"
+    networks:
+      - skillhub-network
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '1.0'
+
+networks:
+  # Réseau EXTERNE : créé par le docker-compose SkillHub
+  # Il doit être up AVANT de lancer cette stack
+  skillhub-network:
+    external: true
+    name: skillhub-network
+    driver: bridge
