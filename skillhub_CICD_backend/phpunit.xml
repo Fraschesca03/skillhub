@@ -33,5 +33,8 @@
         <env name="TELESCOPE_ENABLED" value="false"/>
         <env name="NIGHTWATCH_ENABLED" value="false"/>
         <env name="JWT_SECRET" value="skillhub_phpunit_secret_key_for_testing_only_32chars"/>
+        <env name="MONGO_HOST" value="127.0.0.1"/>
+        <env name="MONGO_PORT" value="27017"/>
+        <env name="MONGO_DATABASE" value="skillhub_test"/>
     </php>
 </phpunit>

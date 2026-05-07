@@ -4,20 +4,20 @@ namespace App\Models;
 
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-use Tymon\JWTAuth\Contracts\JWTSubject;
 use OpenApi\Attributes as OA;
+use Tymon\JWTAuth\Contracts\JWTSubject;
 
 /**
  * Utilisateur de la plateforme. Peut être apprenant ou formateur.
  *
  * Implémente JWTSubject pour que tymon/jwt-auth sache générer un token à partir d'un User.
  *
- * @property int         $id
- * @property string      $nom
- * @property string      $email
- * @property string      $password        hashé par le cast Eloquent
- * @property string      $role            "apprenant" ou "formateur"
- * @property string|null $photo_profil    chemin relatif vers /images/profils
+ * @property int $id
+ * @property string $nom
+ * @property string $email
+ * @property string $password hashé par le cast Eloquent
+ * @property string $role "apprenant" ou "formateur"
+ * @property string|null $photo_profil chemin relatif vers /images/profils
  *
  * @author MU202612
  */

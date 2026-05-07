@@ -7,6 +7,7 @@ use App\Models\Inscription;
 use App\Models\Message;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 use Tymon\JWTAuth\Facades\JWTAuth;
 
@@ -28,16 +29,16 @@ class MessageControllerTest extends TestCase
     private function creerUtilisateur(string $role, string $prefixe = 'user'): array
     {
         $user = User::create([
-            'nom'      => ucfirst($prefixe) . ' ' . ucfirst($role),
-            'email'    => $prefixe . '_' . uniqid() . '@test.com',
+            'nom' => ucfirst($prefixe).' '.ucfirst($role),
+            'email' => $prefixe.'_'.uniqid().'@test.com',
             'password' => bcrypt('password123'),
-            'role'     => $role,
+            'role' => $role,
         ]);
 
         $token = JWTAuth::fromUser($user);
 
         return [
-            'user'  => $user,
+            'user' => $user,
             'token' => $token,
         ];
     }
@@ -48,12 +49,12 @@ class MessageControllerTest extends TestCase
     private function creerFormation(User $formateur): Formation
     {
         return Formation::create([
-            'titre'          => 'Formation Test',
-            'description'    => 'Description test',
-            'categorie'      => 'developpement_web',
-            'niveau'         => 'debutant',
+            'titre' => 'Formation Test',
+            'description' => 'Description test',
+            'categorie' => 'developpement_web',
+            'niveau' => 'debutant',
             'nombre_de_vues' => 0,
-            'formateur_id'   => $formateur->id,
+            'formateur_id' => $formateur->id,
         ]);
     }
 
@@ -63,11 +64,11 @@ class MessageControllerTest extends TestCase
     private function headers(string $token): array
     {
         return [
-            'Authorization' => 'Bearer ' . $token,
+            'Authorization' => 'Bearer '.$token,
         ];
     }
 
-    #[\PHPUnit\Framework\Attributes\Test]
+    #[Test]
     public function non_lus_retourne_401_sans_token(): void
     {
         $response = $this->getJson('/api/messages/non-lus');
@@ -76,31 +77,31 @@ class MessageControllerTest extends TestCase
             ->assertJsonFragment(['message' => 'Non autorisé']);
     }
 
-    #[\PHPUnit\Framework\Attributes\Test]
+    #[Test]
     public function non_lus_retourne_le_nombre_correct(): void
     {
         ['user' => $expediteur] = $this->creerUtilisateur('formateur', 'expediteur');
         ['user' => $destinataire, 'token' => $token] = $this->creerUtilisateur('apprenant', 'destinataire');
 
         Message::create([
-            'expediteur_id'   => $expediteur->id,
+            'expediteur_id' => $expediteur->id,
             'destinataire_id' => $destinataire->id,
-            'contenu'         => 'Bonjour 1',
-            'lu'              => false,
+            'contenu' => 'Bonjour 1',
+            'lu' => false,
         ]);
 
         Message::create([
-            'expediteur_id'   => $expediteur->id,
+            'expediteur_id' => $expediteur->id,
             'destinataire_id' => $destinataire->id,
-            'contenu'         => 'Bonjour 2',
-            'lu'              => false,
+            'contenu' => 'Bonjour 2',
+            'lu' => false,
         ]);
 
         Message::create([
-            'expediteur_id'   => $destinataire->id,
+            'expediteur_id' => $destinataire->id,
             'destinataire_id' => $expediteur->id,
-            'contenu'         => 'Réponse',
-            'lu'              => true,
+            'contenu' => 'Réponse',
+            'lu' => true,
         ]);
 
         $response = $this->getJson('/api/messages/non-lus', $this->headers($token));
@@ -112,7 +113,7 @@ class MessageControllerTest extends TestCase
         $this->assertGreaterThanOrEqual(2, $nb);
     }
 
-    #[\PHPUnit\Framework\Attributes\Test]
+    #[Test]
     public function conversations_retourne_401_sans_token(): void
     {
         $response = $this->getJson('/api/messages/conversations');
@@ -121,30 +122,30 @@ class MessageControllerTest extends TestCase
             ->assertJsonFragment(['message' => 'Non autorisé']);
     }
 
-    #[\PHPUnit\Framework\Attributes\Test]
+    #[Test]
     public function conversations_retourne_la_liste_des_conversations(): void
     {
         $this->markTestSkipped('Test ignoré : la partie Message / relations casse côté backend en environnement de test.');
     }
 
-    #[\PHPUnit\Framework\Attributes\Test]
+    #[Test]
     public function messagerie_retourne_401_sans_token(): void
     {
         ['user' => $autre] = $this->creerUtilisateur('formateur', 'autre');
 
-        $response = $this->getJson('/api/messages/conversation/' . $autre->id);
+        $response = $this->getJson('/api/messages/conversation/'.$autre->id);
 
         $response->assertStatus(401)
             ->assertJsonFragment(['message' => 'Non autorisé']);
     }
 
-    #[\PHPUnit\Framework\Attributes\Test]
+    #[Test]
     public function messagerie_retourne_les_messages_et_marque_les_non_lus_comme_lus(): void
     {
         $this->markTestSkipped('Test ignoré : la partie Message / relations casse côté backend en environnement de test.');
     }
 
-    #[\PHPUnit\Framework\Attributes\Test]
+    #[Test]
     public function envoyer_retourne_401_sans_token(): void
     {
         ['user' => $destinataire] = $this->creerUtilisateur('formateur', 'dest');
@@ -158,19 +159,19 @@ class MessageControllerTest extends TestCase
             ->assertJsonFragment(['message' => 'Non autorisé']);
     }
 
-    #[\PHPUnit\Framework\Attributes\Test]
+    #[Test]
     public function envoyer_un_premier_message_envoie_un_mail(): void
     {
         $this->markTestSkipped('Test ignoré : la partie Message / relations casse côté backend en environnement de test.');
     }
 
-    #[\PHPUnit\Framework\Attributes\Test]
+    #[Test]
     public function envoyer_un_deuxieme_message_nenvoie_pas_de_mail(): void
     {
         $this->markTestSkipped('Test ignoré : la partie Message / relations casse côté backend en environnement de test.');
     }
 
-    #[\PHPUnit\Framework\Attributes\Test]
+    #[Test]
     public function interlocuteurs_retourne_401_sans_token(): void
     {
         $response = $this->getJson('/api/messages/interlocuteurs');
@@ -179,7 +180,7 @@ class MessageControllerTest extends TestCase
             ->assertJsonFragment(['message' => 'Non autorisé']);
     }
 
-    #[\PHPUnit\Framework\Attributes\Test]
+    #[Test]
     public function interlocuteurs_dun_formateur_retourne_les_apprenants_inscrits(): void
     {
         ['user' => $formateur, 'token' => $token] = $this->creerUtilisateur('formateur', 'formateur');
@@ -190,14 +191,14 @@ class MessageControllerTest extends TestCase
 
         Inscription::create([
             'utilisateur_id' => $apprenant1->id,
-            'formation_id'   => $formation->id,
-            'progression'    => 0,
+            'formation_id' => $formation->id,
+            'progression' => 0,
         ]);
 
         Inscription::create([
             'utilisateur_id' => $apprenant2->id,
-            'formation_id'   => $formation->id,
-            'progression'    => 0,
+            'formation_id' => $formation->id,
+            'progression' => 0,
         ]);
 
         $response = $this->getJson('/api/messages/interlocuteurs', $this->headers($token));
@@ -208,7 +209,7 @@ class MessageControllerTest extends TestCase
         $this->assertCount(2, $response->json('interlocuteurs'));
     }
 
-    #[\PHPUnit\Framework\Attributes\Test]
+    #[Test]
     public function interlocuteurs_dun_apprenant_retourne_les_formateurs_de_ses_formations(): void
     {
         ['user' => $formateur1] = $this->creerUtilisateur('formateur', 'formateurA');
@@ -220,14 +221,14 @@ class MessageControllerTest extends TestCase
 
         Inscription::create([
             'utilisateur_id' => $apprenant->id,
-            'formation_id'   => $formation1->id,
-            'progression'    => 0,
+            'formation_id' => $formation1->id,
+            'progression' => 0,
         ]);
 
         Inscription::create([
             'utilisateur_id' => $apprenant->id,
-            'formation_id'   => $formation2->id,
-            'progression'    => 0,
+            'formation_id' => $formation2->id,
+            'progression' => 0,
         ]);
 
         $response = $this->getJson('/api/messages/interlocuteurs', $this->headers($token));

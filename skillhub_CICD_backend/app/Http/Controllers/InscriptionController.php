@@ -30,7 +30,7 @@ class InscriptionController extends Controller
      * encore suivre, pratique pour afficher un compteur côté front.
      *
      * @param  mixed  $formationId
-     * @return JsonResponse  201 ou erreur
+     * @return JsonResponse 201 ou erreur
      */
     #[OA\Post(
         path: '/api/formations/{id}/inscription',
@@ -84,23 +84,23 @@ class InscriptionController extends Controller
 
         if ($nombreFormationsSuivies >= $maxFormations) {
             return response()->json([
-                'message'             => 'Vous ne pouvez pas suivre plus de 5 formations',
-                'max_formations'      => $maxFormations,
-                'formations_suivies'  => $nombreFormationsSuivies,
+                'message' => 'Vous ne pouvez pas suivre plus de 5 formations',
+                'max_formations' => $maxFormations,
+                'formations_suivies' => $nombreFormationsSuivies,
             ], 400);
         }
 
         $inscription = Inscription::create([
             'utilisateur_id' => $user->id,
-            'formation_id'   => $formation->id,
-            'progression'    => 0,
+            'formation_id' => $formation->id,
+            'progression' => 0,
         ]);
 
         ActivityLogService::inscriptionFormation($formation->id, $user->id);
 
         return response()->json([
-            'message'             => 'Inscription réussie',
-            'inscription'         => $inscription,
+            'message' => 'Inscription réussie',
+            'inscription' => $inscription,
             'formations_restantes' => $maxFormations - ($nombreFormationsSuivies + 1),
         ], 201);
     }
@@ -115,7 +115,6 @@ class InscriptionController extends Controller
      * - 404 si pas trouvée, sinon supprime.
      *
      * @param  mixed  $formationId
-     * @return JsonResponse
      */
     #[OA\Delete(
         path: '/api/formations/{id}/inscription',
@@ -161,7 +160,7 @@ class InscriptionController extends Controller
      *
      * Sert de tableau de bord apprenant.
      *
-     * @return JsonResponse  liste d'inscriptions enrichies
+     * @return JsonResponse liste d'inscriptions enrichies
      */
     #[OA\Get(
         path: '/api/apprenant/formations',

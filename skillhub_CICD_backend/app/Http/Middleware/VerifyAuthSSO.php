@@ -5,7 +5,6 @@ namespace App\Http\Middleware;
 use App\Models\User;
 use Closure;
 use Illuminate\Http\Request;
-use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -50,9 +49,7 @@ class VerifyAuthSSO
      * - Injecte le User Laravel dans la requête via setUserResolver et merge('sso_user').
      * - Log info en cas de succès, warning en cas de refus, error si service indispo.
      *
-     * @param  Request  $request
-     * @param  Closure  $next     suite du pipeline middleware
-     * @return mixed
+     * @param  Closure  $next  suite du pipeline middleware
      */
     public function handle(Request $request, Closure $next): mixed
     {
@@ -71,15 +68,16 @@ class VerifyAuthSSO
         //    pour valider le JWT et recuperer les infos user
         try {
             $response = Http::withHeaders([
-                'Authorization' => 'Bearer ' . $jwt,
-                'Accept'        => 'application/json',
+                'Authorization' => 'Bearer '.$jwt,
+                'Accept' => 'application/json',
             ])
                 ->timeout(5)
-                ->get($this->authServiceUrl . '/api/me');
+                ->get($this->authServiceUrl.'/api/me');
         } catch (\Exception $e) {
             Log::error('SSO : microservice Spring Boot injoignable', [
                 'error' => $e->getMessage(),
             ]);
+
             return response()->json([
                 'message' => 'Service d\'authentification indisponible',
             ], 503);
@@ -90,6 +88,7 @@ class VerifyAuthSSO
             Log::warning('SSO : token refuse par Spring Boot', [
                 'status' => $response->status(),
             ]);
+
             return response()->json([
                 'message' => 'Token invalide ou expire',
             ], 401);
@@ -106,7 +105,7 @@ class VerifyAuthSSO
 
         // 5. Charger le modele User Laravel (DB partagee)
         $userId = $userData['id'] ?? null;
-        $user   = $userId ? User::find($userId) : User::where('email', $userData['email'])->first();
+        $user = $userId ? User::find($userId) : User::where('email', $userData['email'])->first();
 
         if (! $user) {
             return response()->json([
@@ -115,14 +114,14 @@ class VerifyAuthSSO
         }
 
         // 6. Injecter le user dans la requete pour les controllers
-        $request->setUserResolver(fn() => $user);
+        $request->setUserResolver(fn () => $user);
         $request->merge(['sso_user' => $user]);
 
         // 7. Logger pour la demo
         Log::info('SSO : authentification reussie via Spring Boot', [
             'user_id' => $user->id,
-            'email'   => $user->email,
-            'route'   => $request->path(),
+            'email' => $user->email,
+            'route' => $request->path(),
         ]);
 
         return $next($request);

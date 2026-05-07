@@ -24,9 +24,8 @@ class CorsMiddleware
      * - Sinon on laisse le pipeline traiter la requête, puis on injecte les headers
      *   CORS sur la réponse avant de la renvoyer.
      *
-     * @param  Request  $request
-     * @param  Closure  $next     suite du pipeline middleware
-     * @return mixed              la réponse HTTP avec headers CORS
+     * @param  Closure  $next  suite du pipeline middleware
+     * @return mixed la réponse HTTP avec headers CORS
      */
     public function handle(Request $request, Closure $next)
     {

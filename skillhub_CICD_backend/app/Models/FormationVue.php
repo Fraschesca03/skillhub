@@ -10,10 +10,10 @@ use Illuminate\Database\Eloquent\Model;
  * n'est pas connecté. Empêche qu'un même apprenant gonfle artificiellement
  * le compteur en rechargeant la page.
  *
- * @property int         $id
- * @property int         $formation_id
- * @property int|null    $utilisateur_id  null si visiteur anonyme
- * @property string      $ip
+ * @property int $id
+ * @property int $formation_id
+ * @property int|null $utilisateur_id null si visiteur anonyme
+ * @property string $ip
  *
  * @author MU202612
  */

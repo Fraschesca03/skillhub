@@ -11,7 +11,7 @@ use OpenApi\Attributes as OA;
  * @property int $id
  * @property int $utilisateur_id
  * @property int $formation_id
- * @property int $progression     entre 0 et 100, recalculé à chaque module terminé
+ * @property int $progression entre 0 et 100, recalculé à chaque module terminé
  *
  * @author MU202612
  */

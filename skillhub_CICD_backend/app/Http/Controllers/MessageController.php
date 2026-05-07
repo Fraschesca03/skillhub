@@ -8,9 +8,9 @@ use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
-use Tymon\JWTAuth\Facades\JWTAuth;
-use Tymon\JWTAuth\Exceptions\JWTException;
 use OpenApi\Attributes as OA;
+use Tymon\JWTAuth\Exceptions\JWTException;
+use Tymon\JWTAuth\Facades\JWTAuth;
 
 /**
  * Endpoints de messagerie : compteur de messages non lus, conversations,
@@ -25,7 +25,7 @@ class MessageController extends Controller
      *
      * Pratique pour afficher un badge "X messages" en haut de l'app.
      *
-     * @return JsonResponse  { non_lus: int } ou 401
+     * @return JsonResponse { non_lus: int } ou 401
      */
     #[OA\Get(
         path: '/api/messages/non-lus',
@@ -63,7 +63,7 @@ class MessageController extends Controller
      *
      * Le résultat ne contient pas l'historique complet, juste un résumé par discussion.
      *
-     * @return JsonResponse  { conversations: array }
+     * @return JsonResponse { conversations: array }
      */
     #[OA\Get(
         path: '/api/messages/conversations',
@@ -99,11 +99,11 @@ class MessageController extends Controller
 
             if (! isset($conversations[$id])) {
                 $conversations[$id] = [
-                    'interlocuteur_id'  => $interlocuteur->id,
+                    'interlocuteur_id' => $interlocuteur->id,
                     'interlocuteur_nom' => $interlocuteur->nom,
-                    'dernier_message'   => $message->contenu,
-                    'date'              => $message->created_at,
-                    'non_lus'           => 0,
+                    'dernier_message' => $message->contenu,
+                    'date' => $message->created_at,
+                    'non_lus' => 0,
                 ];
             }
 
@@ -123,8 +123,7 @@ class MessageController extends Controller
      *
      * Les messages sont triés du plus ancien au plus récent (ordre de lecture).
      *
-     * @param  int  $interlocuteurId
-     * @return JsonResponse  { messages: array }
+     * @return JsonResponse { messages: array }
      */
     #[OA\Get(
         path: '/api/messages/{interlocuteurId}',
@@ -178,7 +177,7 @@ class MessageController extends Controller
      * - Si premier message, déclenche un mail à l'autre utilisateur via NouveauMessageMail.
      *
      * @param  Request  $request  body : destinataire_id, contenu
-     * @return JsonResponse  201 avec { message, data }
+     * @return JsonResponse 201 avec { message, data }
      */
     #[OA\Post(
         path: '/api/messages',
@@ -210,11 +209,11 @@ class MessageController extends Controller
 
         $request->validate([
             'destinataire_id' => 'required|integer|exists:users,id',
-            'contenu'         => 'required|string|max:2000',
+            'contenu' => 'required|string|max:2000',
         ]);
 
         $destinataireId = $request->input('destinataire_id');
-        $contenu        = $request->input('contenu');
+        $contenu = $request->input('contenu');
 
         $estPremierMessage = ! Message::where(function ($q) use ($user, $destinataireId) {
             $q->where('expediteur_id', $user->id)
@@ -225,10 +224,10 @@ class MessageController extends Controller
         })->exists();
 
         $message = Message::create([
-            'expediteur_id'   => $user->id,
+            'expediteur_id' => $user->id,
             'destinataire_id' => $destinataireId,
-            'contenu'         => $contenu,
-            'lu'              => false,
+            'contenu' => $contenu,
+            'lu' => false,
         ]);
 
         $message->load('expediteur:id,nom', 'destinataire:id,nom');
@@ -251,7 +250,7 @@ class MessageController extends Controller
      *
      * Évite de pouvoir messager n'importe qui (anti-spam, anti-harcèlement).
      *
-     * @return JsonResponse  { interlocuteurs: array }
+     * @return JsonResponse { interlocuteurs: array }
      */
     #[OA\Get(
         path: '/api/messages/interlocuteurs',
@@ -295,7 +294,7 @@ class MessageController extends Controller
      * Variante minimaliste de authentifierUtilisateur() pour les endpoints
      * de messagerie (qui veulent juste savoir s'il y a un user connecté).
      *
-     * @return \App\Models\User|null
+     * @return User|null
      */
     private function utilisateurConnecte()
     {

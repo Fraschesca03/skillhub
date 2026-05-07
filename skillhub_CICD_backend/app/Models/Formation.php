@@ -8,15 +8,15 @@ use OpenApi\Attributes as OA;
 /**
  * Formation proposée par un formateur. Contient des modules et reçoit des inscriptions.
  *
- * @property int    $id
+ * @property int $id
  * @property string $titre
  * @property string $description
- * @property string $categorie       developpement_web | data | design | marketing | devops | autre
- * @property string $niveau          debutant | intermediaire | avance
- * @property float  $prix
- * @property int    $duree_heures
- * @property int    $nombre_de_vues
- * @property int    $formateur_id
+ * @property string $categorie developpement_web | data | design | marketing | devops | autre
+ * @property string $niveau debutant | intermediaire | avance
+ * @property float $prix
+ * @property int $duree_heures
+ * @property int $nombre_de_vues
+ * @property int $formateur_id
  *
  * @author MU202612
  */

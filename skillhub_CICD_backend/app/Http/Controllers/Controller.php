@@ -2,9 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\User;
 use Illuminate\Http\JsonResponse;
-use Tymon\JWTAuth\Facades\JWTAuth;
 use Tymon\JWTAuth\Exceptions\JWTException;
+use Tymon\JWTAuth\Facades\JWTAuth;
 
 /**
  * Classe parente des contrôleurs. Centralise le helper d'auth JWT.
@@ -13,7 +14,8 @@ use Tymon\JWTAuth\Exceptions\JWTException;
  */
 abstract class Controller
 {
-    protected const MSG_TOKEN_INVALIDE  = 'Token invalide ou absent';
+    protected const MSG_TOKEN_INVALIDE = 'Token invalide ou absent';
+
     protected const MSG_USER_NON_TROUVE = 'Utilisateur non trouvé';
 
     /**
@@ -25,7 +27,7 @@ abstract class Controller
      *
      * Utilisé partout où on a besoin de connaître l'appelant avant d'agir.
      *
-     * @return array{0: \App\Models\User|null, 1: JsonResponse|null} couple [user, erreur]
+     * @return array{0: User|null, 1: JsonResponse|null} couple [user, erreur]
      */
     protected function authentifierUtilisateur(): array
     {

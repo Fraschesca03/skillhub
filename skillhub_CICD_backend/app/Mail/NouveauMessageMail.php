@@ -36,27 +36,21 @@ class NouveauMessageMail extends Mailable
     /**
      * Construit le mail avec les infos d'expéditeur et destinataire.
      * Récupère l'URL de la plateforme depuis config('app.url').
-     *
-     * @param  string  $expediteur
-     * @param  string  $destinataire
-     * @param  string  $contenu
      */
     public function __construct(string $expediteur, string $destinataire, string $contenu)
     {
-        $this->expediteur     = $expediteur;
-        $this->destinataire   = $destinataire;
-        $this->contenu        = $contenu;
+        $this->expediteur = $expediteur;
+        $this->destinataire = $destinataire;
+        $this->contenu = $contenu;
         $this->lienPlateforme = config('app.url');
     }
 
     /**
      * Définit le sujet et la vue Blade utilisée pour rendre le mail.
-     *
-     * @return static
      */
     public function build(): static
     {
-        return $this->subject('SkillHub — Nouveau message de ' . $this->expediteur)
-                    ->view('emails.nouveau_message');
+        return $this->subject('SkillHub — Nouveau message de '.$this->expediteur)
+            ->view('emails.nouveau_message');
     }
 }

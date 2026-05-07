@@ -25,7 +25,7 @@ class MessageTest extends TestCase
 {
     use RefreshDatabase;
 
-    // ─── Nettoyage MongoDB entre chaque test ─────────────────────────────
+    //  Nettoyage MongoDB entre chaque test
     protected function setUp(): void
     {
         parent::setUp();
@@ -33,41 +33,40 @@ class MessageTest extends TestCase
         Message::truncate();
     }
 
-    // ─── Helpers ─────────────────────────────────────────────────────────
+    //  Helpers
 
     private function creerUtilisateur(string $role, string $suffix = ''): array
     {
-        $email = $role . $suffix . '@msg-test.com';
+        $email = $role.$suffix.'@msg-test.com';
         $user = User::create([
-            'nom'      => ucfirst($role) . $suffix,
-            'email'    => $email,
+            'nom' => ucfirst($role).$suffix,
+            'email' => $email,
             'password' => bcrypt('password123'),
-            'role'     => $role,
+            'role' => $role,
         ]);
         $token = JWTAuth::fromUser($user);
+
         return ['user' => $user, 'token' => $token];
     }
 
     private function headers(string $token): array
     {
-        return ['Authorization' => 'Bearer ' . $token];
+        return ['Authorization' => 'Bearer '.$token];
     }
 
     private function creerFormation(User $formateur): Formation
     {
         return Formation::create([
-            'titre'          => 'Formation Message Test',
-            'description'    => 'Description',
-            'categorie'      => 'developpement_web',
-            'niveau'         => 'debutant',
+            'titre' => 'Formation Message Test',
+            'description' => 'Description',
+            'categorie' => 'developpement_web',
+            'niveau' => 'debutant',
             'nombre_de_vues' => 0,
-            'formateur_id'   => $formateur->id,
+            'formateur_id' => $formateur->id,
         ]);
     }
 
-    // =========================================================================
     // Messages non lus
-    // =========================================================================
 
     /** @test */
     public function non_lus_retourne_le_nombre_de_messages_non_lus(): void
@@ -77,16 +76,16 @@ class MessageTest extends TestCase
 
         // Envoie 2 messages
         Message::create([
-            'expediteur_id'   => $expediteur->id,
+            'expediteur_id' => $expediteur->id,
             'destinataire_id' => $destinataire->id,
-            'contenu'         => 'Bonjour',
-            'lu'              => false,
+            'contenu' => 'Bonjour',
+            'lu' => false,
         ]);
         Message::create([
-            'expediteur_id'   => $expediteur->id,
+            'expediteur_id' => $expediteur->id,
             'destinataire_id' => $destinataire->id,
-            'contenu'         => 'Comment allez-vous ?',
-            'lu'              => false,
+            'contenu' => 'Comment allez-vous ?',
+            'lu' => false,
         ]);
 
         $response = $this->getJson('/api/messages/non-lus', $this->headers($tokenDest));
@@ -114,9 +113,7 @@ class MessageTest extends TestCase
         $response->assertStatus(401);
     }
 
-    // =========================================================================
     // Conversations
-    // =========================================================================
 
     /** @test */
     public function conversations_retourne_la_liste_des_interlocuteurs(): void
@@ -125,10 +122,10 @@ class MessageTest extends TestCase
         ['user' => $userB] = $this->creerUtilisateur('apprenant');
 
         Message::create([
-            'expediteur_id'   => $userA->id,
+            'expediteur_id' => $userA->id,
             'destinataire_id' => $userB->id,
-            'contenu'         => 'Premier message',
-            'lu'              => false,
+            'contenu' => 'Premier message',
+            'lu' => false,
         ]);
 
         $response = $this->getJson('/api/messages/conversations', $this->headers($tokenA));
@@ -145,9 +142,7 @@ class MessageTest extends TestCase
         $response->assertStatus(401);
     }
 
-    // =========================================================================
     // Messagerie (conversation entre deux utilisateurs)
-    // =========================================================================
 
     /** @test */
     public function messagerie_retourne_les_messages_entre_deux_utilisateurs(): void
@@ -156,13 +151,13 @@ class MessageTest extends TestCase
         ['user' => $userB] = $this->creerUtilisateur('apprenant');
 
         Message::create([
-            'expediteur_id'   => $userA->id,
+            'expediteur_id' => $userA->id,
             'destinataire_id' => $userB->id,
-            'contenu'         => 'Bonjour apprenant',
-            'lu'              => false,
+            'contenu' => 'Bonjour apprenant',
+            'lu' => false,
         ]);
 
-        $response = $this->getJson('/api/messages/conversation/' . $userB->id, $this->headers($tokenA));
+        $response = $this->getJson('/api/messages/conversation/'.$userB->id, $this->headers($tokenA));
 
         $response->assertStatus(200)
             ->assertJsonStructure(['messages']);
@@ -176,14 +171,14 @@ class MessageTest extends TestCase
 
         // userA envoie un message a userB
         Message::create([
-            'expediteur_id'   => $userA->id,
+            'expediteur_id' => $userA->id,
             'destinataire_id' => $userB->id,
-            'contenu'         => 'Message a lire',
-            'lu'              => false,
+            'contenu' => 'Message a lire',
+            'lu' => false,
         ]);
 
         // userB consulte la conversation : le message doit etre marque lu
-        $this->getJson('/api/messages/conversation/' . $userA->id, $this->headers($tokenB));
+        $this->getJson('/api/messages/conversation/'.$userA->id, $this->headers($tokenB));
 
         $nonLus = $this->getJson('/api/messages/non-lus', $this->headers($tokenB));
         $nonLus->assertJsonFragment(['non_lus' => 0]);
@@ -197,9 +192,7 @@ class MessageTest extends TestCase
         $response->assertStatus(401);
     }
 
-    // =========================================================================
     // Envoi d un message
-    // =========================================================================
 
     /** @test */
     public function envoyer_un_message_fonctionne(): void
@@ -209,7 +202,7 @@ class MessageTest extends TestCase
 
         $response = $this->postJson('/api/messages/envoyer', [
             'destinataire_id' => $destinataire->id,
-            'contenu'         => 'Bienvenue dans la formation !',
+            'contenu' => 'Bienvenue dans la formation !',
         ], $this->headers($token));
 
         $response->assertStatus(201)
@@ -223,7 +216,7 @@ class MessageTest extends TestCase
 
         $response = $this->postJson('/api/messages/envoyer', [
             'destinataire_id' => 9999,
-            'contenu'         => 'Message vers utilisateur inexistant',
+            'contenu' => 'Message vers utilisateur inexistant',
         ], $this->headers($token));
 
         $response->assertStatus(422);
@@ -234,7 +227,7 @@ class MessageTest extends TestCase
     {
         $response = $this->postJson('/api/messages/envoyer', [
             'destinataire_id' => 1,
-            'contenu'         => 'Test',
+            'contenu' => 'Test',
         ]);
 
         $response->assertStatus(401);
@@ -250,7 +243,7 @@ class MessageTest extends TestCase
         // Premier message de la conversation
         $response = $this->postJson('/api/messages/envoyer', [
             'destinataire_id' => $destinataire->id,
-            'contenu'         => 'Premier contact !',
+            'contenu' => 'Premier contact !',
         ], $this->headers($token));
 
         $response->assertStatus(201);
@@ -258,15 +251,13 @@ class MessageTest extends TestCase
         // Deuxieme message : pas de mail
         $response2 = $this->postJson('/api/messages/envoyer', [
             'destinataire_id' => $destinataire->id,
-            'contenu'         => 'Suite de la conversation',
+            'contenu' => 'Suite de la conversation',
         ], $this->headers($token));
 
         $response2->assertStatus(201);
     }
 
-    // =========================================================================
     // Interlocuteurs
-    // =========================================================================
 
     /** @test */
     public function interlocuteurs_formateur_retourne_ses_apprenants(): void
@@ -277,8 +268,8 @@ class MessageTest extends TestCase
         $formation = $this->creerFormation($formateur);
         Inscription::create([
             'utilisateur_id' => $apprenant->id,
-            'formation_id'   => $formation->id,
-            'progression'    => 0,
+            'formation_id' => $formation->id,
+            'progression' => 0,
         ]);
 
         $response = $this->getJson('/api/messages/interlocuteurs', $this->headers($token));
@@ -296,8 +287,8 @@ class MessageTest extends TestCase
         $formation = $this->creerFormation($formateur);
         Inscription::create([
             'utilisateur_id' => $apprenant->id,
-            'formation_id'   => $formation->id,
-            'progression'    => 0,
+            'formation_id' => $formation->id,
+            'progression' => 0,
         ]);
 
         $response = $this->getJson('/api/messages/interlocuteurs', $this->headers($token));

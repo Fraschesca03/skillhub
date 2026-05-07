@@ -13,11 +13,11 @@ use OpenApi\Attributes as OA;
  * MySQL users — il n'y a pas de contrainte de clé étrangère côté MongoDB,
  * c'est l'application qui garantit la cohérence.
  *
- * @property string $_id              id Mongo (ObjectId)
- * @property int    $expediteur_id
- * @property int    $destinataire_id
+ * @property string $_id id Mongo (ObjectId)
+ * @property int $expediteur_id
+ * @property int $destinataire_id
  * @property string $contenu
- * @property bool   $lu               passe à true quand le destinataire ouvre la conversation
+ * @property bool $lu passe à true quand le destinataire ouvre la conversation
  *
  * @author MU202612
  */
@@ -63,8 +63,8 @@ class Message extends Model
      * @var array<string, string>
      */
     protected $casts = [
-        'lu'              => 'boolean',
-        'expediteur_id'   => 'integer',
+        'lu' => 'boolean',
+        'expediteur_id' => 'integer',
         'destinataire_id' => 'integer',
     ];
 

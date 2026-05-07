@@ -32,39 +32,40 @@ class CoverageTest extends TestCase
     private function creerUtilisateur(string $role, string $suffix = ''): array
     {
         $user = User::create([
-            'nom'      => ucfirst($role) . $suffix,
-            'email'    => $role . $suffix . '@cover-test.com',
+            'nom' => ucfirst($role).$suffix,
+            'email' => $role.$suffix.'@cover-test.com',
             'password' => bcrypt('password123'),
-            'role'     => $role,
+            'role' => $role,
         ]);
+
         return ['user' => $user, 'token' => JWTAuth::fromUser($user)];
     }
 
     private function creerFormation(User $formateur): Formation
     {
         return Formation::create([
-            'titre'          => 'Formation Cover',
-            'description'    => 'Description',
-            'categorie'      => 'developpement_web',
-            'niveau'         => 'debutant',
+            'titre' => 'Formation Cover',
+            'description' => 'Description',
+            'categorie' => 'developpement_web',
+            'niveau' => 'debutant',
             'nombre_de_vues' => 0,
-            'formateur_id'   => $formateur->id,
+            'formateur_id' => $formateur->id,
         ]);
     }
 
     private function creerModule(Formation $formation, int $ordre = 1): Module
     {
         return Module::create([
-            'titre'        => 'Module ' . $ordre,
-            'contenu'      => 'Contenu ' . $ordre,
-            'ordre'        => $ordre,
+            'titre' => 'Module '.$ordre,
+            'contenu' => 'Contenu '.$ordre,
+            'ordre' => $ordre,
             'formation_id' => $formation->id,
         ]);
     }
 
     private function headers(string $token): array
     {
-        return ['Authorization' => 'Bearer ' . $token];
+        return ['Authorization' => 'Bearer '.$token];
     }
 
     // =========================================================================
@@ -80,7 +81,7 @@ class CoverageTest extends TestCase
         $formation = $this->creerFormation($formateur);
 
         $response = $this->getJson(
-            '/api/formations/' . $formation->id,
+            '/api/formations/'.$formation->id,
             $this->headers($token)
         );
 
@@ -88,7 +89,7 @@ class CoverageTest extends TestCase
 
         // La vue doit etre enregistree en base
         $this->assertDatabaseHas('formation_vues', [
-            'formation_id'   => $formation->id,
+            'formation_id' => $formation->id,
             'utilisateur_id' => $apprenant->id,
         ]);
 
@@ -104,9 +105,9 @@ class CoverageTest extends TestCase
         $formation = $this->creerFormation($formateur);
 
         // Premiere visite
-        $this->getJson('/api/formations/' . $formation->id, $this->headers($token));
+        $this->getJson('/api/formations/'.$formation->id, $this->headers($token));
         // Deuxieme visite du meme user : ne doit pas incrementer
-        $this->getJson('/api/formations/' . $formation->id, $this->headers($token));
+        $this->getJson('/api/formations/'.$formation->id, $this->headers($token));
 
         $this->assertEquals(1, $formation->fresh()->nombre_de_vues);
     }
@@ -118,7 +119,7 @@ class CoverageTest extends TestCase
         $formation = $this->creerFormation($formateur);
 
         // Premiere visite sans token
-        $this->getJson('/api/formations/' . $formation->id);
+        $this->getJson('/api/formations/'.$formation->id);
 
         $this->assertEquals(1, $formation->fresh()->nombre_de_vues);
     }
@@ -129,8 +130,8 @@ class CoverageTest extends TestCase
         ['user' => $formateur] = $this->creerUtilisateur('formateur');
         $formation = $this->creerFormation($formateur);
 
-        $this->getJson('/api/formations/' . $formation->id);
-        $this->getJson('/api/formations/' . $formation->id);
+        $this->getJson('/api/formations/'.$formation->id);
+        $this->getJson('/api/formations/'.$formation->id);
 
         $this->assertEquals(1, $formation->fresh()->nombre_de_vues);
     }
@@ -174,9 +175,9 @@ class CoverageTest extends TestCase
         $formation = $this->creerFormation($formateur);
 
         $vue = FormationVue::create([
-            'formation_id'   => $formation->id,
+            'formation_id' => $formation->id,
             'utilisateur_id' => $apprenant->id,
-            'ip'             => '127.0.0.1',
+            'ip' => '127.0.0.1',
         ]);
 
         // Couvre formation() et utilisateur() dans FormationVue.php
@@ -197,15 +198,15 @@ class CoverageTest extends TestCase
     {
         // JPEG 1x1 pixel blanc encode en base64 — valide pour getimagesize()
         $contenu = base64_decode(
-            '/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgMCAgMDAwMEAwMEBQgFBQQE' .
-            'BQoHBwYIDAoMCwsKCwsNCxAQDQ4RDgsLEBYQERMUFRUVDA8XGBYUGBIUFRQB' .
-            '2wBDAQMEBAUEBQkFBQkUDQsNFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQU' .
-            'FBQUFBQUFBQUFBQUFBT/wAARCAABAAEDASIAAhEBAxEB/8QAFAABAAAAAAAAAAAAAAAAAAAACf/' .
-            'EABQQAQAAAAAAAAAAAAAAAAAAAAD/xAAUAQEAAAAAAAAAAAAAAAAAAAAA/8QAFBEBAAAA' .
+            '/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgMCAgMDAwMEAwMEBQgFBQQE'.
+            'BQoHBwYIDAoMCwsKCwsNCxAQDQ4RDgsLEBYQERMUFRUVDA8XGBYUGBIUFRQB'.
+            '2wBDAQMEBAUEBQkFBQkUDQsNFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQU'.
+            'FBQUFBQUFBQUFBQUFBT/wAARCAABAAEDASIAAhEBAxEB/8QAFAABAAAAAAAAAAAAAAAAAAAACf/'.
+            'EABQQAQAAAAAAAAAAAAAAAAAAAAD/xAAUAQEAAAAAAAAAAAAAAAAAAAAA/8QAFBEBAAAA'.
             'AAAAAAAAAAAAAAD/2gAMAwEAAhEDEQA/ACWQAB//2Q=='
         );
 
-        $chemin = sys_get_temp_dir() . '/test_' . uniqid() . '.jpg';
+        $chemin = sys_get_temp_dir().'/test_'.uniqid().'.jpg';
         file_put_contents($chemin, $contenu);
 
         return new UploadedFile($chemin, $nom, 'image/jpeg', null, true);
@@ -274,15 +275,15 @@ class CoverageTest extends TestCase
     {
         ['user' => $formateur1] = $this->creerUtilisateur('formateur');
         $formation = $this->creerFormation($formateur1);
-        $module    = $this->creerModule($formation);
+        $module = $this->creerModule($formation);
 
         // Formateur 2 essaie de modifier le module du formateur 1
         ['token' => $token2] = $this->creerUtilisateur('formateur', '2');
 
-        $response = $this->putJson('/api/modules/' . $module->id, [
-            'titre'   => 'Piratage',
+        $response = $this->putJson('/api/modules/'.$module->id, [
+            'titre' => 'Piratage',
             'contenu' => 'Non autorise',
-            'ordre'   => 1,
+            'ordre' => 1,
         ], $this->headers($token2));
 
         $response->assertStatus(403);
@@ -293,11 +294,11 @@ class CoverageTest extends TestCase
     {
         ['user' => $formateur1] = $this->creerUtilisateur('formateur');
         $formation = $this->creerFormation($formateur1);
-        $module    = $this->creerModule($formation);
+        $module = $this->creerModule($formation);
 
         ['token' => $token2] = $this->creerUtilisateur('formateur', '2');
 
-        $response = $this->deleteJson('/api/modules/' . $module->id, [], $this->headers($token2));
+        $response = $this->deleteJson('/api/modules/'.$module->id, [], $this->headers($token2));
 
         $response->assertStatus(403);
     }
@@ -307,13 +308,13 @@ class CoverageTest extends TestCase
     {
         ['user' => $formateur] = $this->creerUtilisateur('formateur');
         $formation = $this->creerFormation($formateur);
-        $module    = $this->creerModule($formation);
+        $module = $this->creerModule($formation);
         ['token' => $token] = $this->creerUtilisateur('apprenant');
 
-        $response = $this->putJson('/api/modules/' . $module->id, [
-            'titre'   => 'Interdit',
+        $response = $this->putJson('/api/modules/'.$module->id, [
+            'titre' => 'Interdit',
             'contenu' => 'Test',
-            'ordre'   => 1,
+            'ordre' => 1,
         ], $this->headers($token));
 
         $response->assertStatus(403);
@@ -324,10 +325,10 @@ class CoverageTest extends TestCase
     {
         ['user' => $formateur] = $this->creerUtilisateur('formateur');
         $formation = $this->creerFormation($formateur);
-        $module    = $this->creerModule($formation);
+        $module = $this->creerModule($formation);
         ['token' => $token] = $this->creerUtilisateur('apprenant');
 
-        $response = $this->deleteJson('/api/modules/' . $module->id, [], $this->headers($token));
+        $response = $this->deleteJson('/api/modules/'.$module->id, [], $this->headers($token));
 
         $response->assertStatus(403);
     }
@@ -350,10 +351,10 @@ class CoverageTest extends TestCase
 
         ['token' => $token2] = $this->creerUtilisateur('formateur', '2');
 
-        $response = $this->postJson('/api/formations/' . $formation->id . '/modules', [
-            'titre'   => 'Module non autorise',
+        $response = $this->postJson('/api/formations/'.$formation->id.'/modules', [
+            'titre' => 'Module non autorise',
             'contenu' => 'Contenu',
-            'ordre'   => 1,
+            'ordre' => 1,
         ], $this->headers($token2));
 
         $response->assertStatus(403);
@@ -380,7 +381,7 @@ class CoverageTest extends TestCase
         $formation = $this->creerFormation($formateur);
 
         $response = $this->deleteJson(
-            '/api/formations/' . $formation->id . '/inscription',
+            '/api/formations/'.$formation->id.'/inscription',
             [],
             $this->headers($token)
         );
@@ -397,7 +398,7 @@ class CoverageTest extends TestCase
 
         // L apprenant n est pas inscrit, donc 404
         $response = $this->deleteJson(
-            '/api/formations/' . $formation->id . '/inscription',
+            '/api/formations/'.$formation->id.'/inscription',
             [],
             $this->headers($token)
         );
@@ -415,10 +416,10 @@ class CoverageTest extends TestCase
         ['token' => $token] = $this->creerUtilisateur('formateur');
 
         $response = $this->putJson('/api/formations/9999', [
-            'titre'       => 'Test',
+            'titre' => 'Test',
             'description' => 'Test',
-            'categorie'   => 'developpement_web',
-            'niveau'      => 'debutant',
+            'categorie' => 'developpement_web',
+            'niveau' => 'debutant',
         ], $this->headers($token));
 
         $response->assertStatus(404);
@@ -444,12 +445,12 @@ class CoverageTest extends TestCase
         ['user' => $formateur] = $this->creerUtilisateur('formateur');
         ['user' => $apprenant] = $this->creerUtilisateur('apprenant');
         $formation = $this->creerFormation($formateur);
-        $module    = $this->creerModule($formation);
+        $module = $this->creerModule($formation);
 
         Inscription::create([
             'utilisateur_id' => $apprenant->id,
-            'formation_id'   => $formation->id,
-            'progression'    => 0,
+            'formation_id' => $formation->id,
+            'progression' => 0,
         ]);
 
         // Couvre Formation::formateur(), modules(), inscriptions(), vues()
@@ -465,12 +466,12 @@ class CoverageTest extends TestCase
         ['user' => $formateur] = $this->creerUtilisateur('formateur');
         ['user' => $apprenant] = $this->creerUtilisateur('apprenant');
         $formation = $this->creerFormation($formateur);
-        $module    = $this->creerModule($formation);
+        $module = $this->creerModule($formation);
 
         Inscription::create([
             'utilisateur_id' => $apprenant->id,
-            'formation_id'   => $formation->id,
-            'progression'    => 0,
+            'formation_id' => $formation->id,
+            'progression' => 0,
         ]);
 
         // Couvre User::formations(), inscriptions(), modulesTermines()
@@ -484,7 +485,7 @@ class CoverageTest extends TestCase
     {
         ['user' => $formateur] = $this->creerUtilisateur('formateur');
         $formation = $this->creerFormation($formateur);
-        $module    = $this->creerModule($formation);
+        $module = $this->creerModule($formation);
 
         // Couvre Module::formation() et Module::utilisateurs()
         $this->assertEquals($formation->id, $module->formation->id);
@@ -500,8 +501,8 @@ class CoverageTest extends TestCase
 
         $inscription = Inscription::create([
             'utilisateur_id' => $apprenant->id,
-            'formation_id'   => $formation->id,
-            'progression'    => 0,
+            'formation_id' => $formation->id,
+            'progression' => 0,
         ]);
 
         // Couvre Inscription::utilisateur() et Inscription::formation()

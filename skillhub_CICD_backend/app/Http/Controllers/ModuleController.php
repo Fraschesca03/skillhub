@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Formation;
 use App\Models\Inscription;
 use App\Models\Module;
+use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use OpenApi\Attributes as OA;
@@ -25,7 +26,7 @@ class ModuleController extends Controller
      * le contenu avant de s'inscrire.
      *
      * @param  mixed  $formationId
-     * @return JsonResponse  liste de modules
+     * @return JsonResponse liste de modules
      */
     #[OA\Get(
         path: '/api/formations/{id}/modules',
@@ -57,9 +58,9 @@ class ModuleController extends Controller
      * - Valide titre / contenu / ordre.
      * - Crée le module rattaché à la formation.
      *
-     * @param  Request  $request      body : titre, contenu, ordre
-     * @param  mixed    $formationId  id de la formation parent
-     * @return JsonResponse  201 ou erreur
+     * @param  Request  $request  body : titre, contenu, ordre
+     * @param  mixed  $formationId  id de la formation parent
+     * @return JsonResponse 201 ou erreur
      */
     #[OA\Post(
         path: '/api/formations/{id}/modules',
@@ -112,15 +113,15 @@ class ModuleController extends Controller
         $data = $request->validate($this->moduleRules());
 
         $module = Module::create([
-            'titre'        => $data['titre'],
-            'contenu'      => $data['contenu'],
-            'ordre'        => $data['ordre'],
+            'titre' => $data['titre'],
+            'contenu' => $data['contenu'],
+            'ordre' => $data['ordre'],
             'formation_id' => $formationId,
         ]);
 
         return response()->json([
             'message' => 'Module créé avec succès',
-            'module'  => $module,
+            'module' => $module,
         ], 201);
     }
 
@@ -132,8 +133,7 @@ class ModuleController extends Controller
      * - Si OK, valide les champs et persiste.
      *
      * @param  Request  $request  body : titre, contenu, ordre
-     * @param  mixed    $id       id du module
-     * @return JsonResponse
+     * @param  mixed  $id  id du module
      */
     #[OA\Put(
         path: '/api/modules/{id}',
@@ -169,14 +169,14 @@ class ModuleController extends Controller
         $data = $request->validate($this->moduleRules());
 
         $module->update([
-            'titre'   => $data['titre'],
+            'titre' => $data['titre'],
             'contenu' => $data['contenu'],
-            'ordre'   => $data['ordre'],
+            'ordre' => $data['ordre'],
         ]);
 
         return response()->json([
             'message' => 'Module mis à jour avec succès',
-            'module'  => $module,
+            'module' => $module,
         ]);
     }
 
@@ -184,7 +184,6 @@ class ModuleController extends Controller
      * Supprime un module. Mêmes règles d'autorisation que update().
      *
      * @param  mixed  $id
-     * @return JsonResponse
      */
     #[OA\Delete(
         path: '/api/modules/{id}',
@@ -228,7 +227,7 @@ class ModuleController extends Controller
      * Utilise les modèles Module, Inscription et la relation user->modulesTermines().
      *
      * @param  mixed  $id  id du module
-     * @return JsonResponse  { message, progression } ou erreur
+     * @return JsonResponse { message, progression } ou erreur
      */
     #[OA\Post(
         path: '/api/modules/{id}/terminer',
@@ -277,14 +276,14 @@ class ModuleController extends Controller
 
         if ($dejaTermine) {
             return response()->json([
-                'message'     => 'Ce module est déjà terminé',
+                'message' => 'Ce module est déjà terminé',
                 'progression' => $inscription->progression,
             ]);
         }
 
         $user->modulesTermines()->attach($module->id, ['termine' => true]);
 
-        $totalModules    = Module::where('formation_id', $module->formation_id)->count();
+        $totalModules = Module::where('formation_id', $module->formation_id)->count();
         $modulesTermines = $user->modulesTermines()
             ->where('formation_id', $module->formation_id)
             ->count();
@@ -297,7 +296,7 @@ class ModuleController extends Controller
         $inscription->save();
 
         return response()->json([
-            'message'     => 'Module terminé avec succès',
+            'message' => 'Module terminé avec succès',
             'progression' => $inscription->progression,
         ]);
     }
@@ -312,7 +311,7 @@ class ModuleController extends Controller
      * Renvoie [user, module, null] si tout va bien, sinon [null, null, JsonResponse erreur].
      *
      * @param  mixed  $id  id du module
-     * @return array{0: \App\Models\User|null, 1: Module|null, 2: JsonResponse|null}
+     * @return array{0: User|null, 1: Module|null, 2: JsonResponse|null}
      */
     private function chargerModuleAutorise($id): array
     {
@@ -346,9 +345,9 @@ class ModuleController extends Controller
     private function moduleRules(): array
     {
         return [
-            'titre'   => 'required|string|max:255',
+            'titre' => 'required|string|max:255',
             'contenu' => 'required|string',
-            'ordre'   => 'required|integer|min:1',
+            'ordre' => 'required|integer|min:1',
         ];
     }
 }

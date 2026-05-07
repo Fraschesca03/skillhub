@@ -5,9 +5,9 @@ namespace App\Http\Controllers;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Tymon\JWTAuth\Facades\JWTAuth;
-use Tymon\JWTAuth\Exceptions\JWTException;
 use OpenApi\Attributes as OA;
+use Tymon\JWTAuth\Exceptions\JWTException;
+use Tymon\JWTAuth\Facades\JWTAuth;
 
 /**
  * Endpoints d'inscription, de connexion, de profil et de logout.
@@ -28,12 +28,11 @@ class AuthController extends Controller
      * Renvoie un JSON { message, user, token } avec status 201.
      *
      * @param  Request  $request  body : nom, email, password, role
-     * @return JsonResponse
      */
     #[OA\Post(
         path: '/api/register',
         tags: ['Auth'],
-        summary: "Inscrire un utilisateur",
+        summary: 'Inscrire un utilisateur',
         requestBody: new OA\RequestBody(
             required: true,
             content: new OA\JsonContent(
@@ -54,24 +53,24 @@ class AuthController extends Controller
     public function register(Request $request): JsonResponse
     {
         $request->validate([
-            'nom'      => 'required|string|max:255',
-            'email'    => 'required|email|unique:users,email',
+            'nom' => 'required|string|max:255',
+            'email' => 'required|email|unique:users,email',
             'password' => 'required|string|min:6',
-            'role'     => 'required|in:apprenant,formateur',
+            'role' => 'required|in:apprenant,formateur',
         ]);
 
-        $user  = User::create([
-            'nom'      => $request->input('nom'),
-            'email'    => $request->input('email'),
+        $user = User::create([
+            'nom' => $request->input('nom'),
+            'email' => $request->input('email'),
             'password' => $request->input('password'),
-            'role'     => $request->input('role'),
+            'role' => $request->input('role'),
         ]);
         $token = JWTAuth::fromUser($user);
 
         return response()->json([
             'message' => 'Utilisateur créé avec succès',
-            'user'    => $user,
-            'token'   => $token,
+            'user' => $user,
+            'token' => $token,
         ], 201);
     }
 
@@ -87,7 +86,6 @@ class AuthController extends Controller
      * Renvoie { message, token, user } ou 401 en cas d'échec.
      *
      * @param  Request  $request  body : email, password
-     * @return JsonResponse
      */
     #[OA\Post(
         path: '/api/login',
@@ -111,12 +109,12 @@ class AuthController extends Controller
     public function login(Request $request): JsonResponse
     {
         $request->validate([
-            'email'    => 'required|email',
+            'email' => 'required|email',
             'password' => 'required|string',
         ]);
 
         $credentials = [
-            'email'    => $request->input('email'),
+            'email' => $request->input('email'),
             'password' => $request->input('password'),
         ];
 
@@ -128,8 +126,8 @@ class AuthController extends Controller
 
         return response()->json([
             'message' => 'Connexion réussie',
-            'token'   => $token,
-            'user'    => auth()->user(),
+            'token' => $token,
+            'user' => auth()->user(),
         ]);
     }
 
@@ -140,8 +138,6 @@ class AuthController extends Controller
      * - Lit le token via authentifierUtilisateur (helper du parent).
      * - Si le token est invalide, renvoie l'erreur déjà préparée.
      * - Sinon renvoie { user }.
-     *
-     * @return JsonResponse
      */
     #[OA\Get(
         path: '/api/profile',
@@ -208,7 +204,6 @@ class AuthController extends Controller
      * Renvoie { message, photo_profil, user }.
      *
      * @param  Request  $request  doit contenir un fichier 'photo'
-     * @return JsonResponse
      */
     #[OA\Post(
         path: '/api/profil/photo',
@@ -250,17 +245,17 @@ class AuthController extends Controller
         }
 
         // Sauvegarde de la nouvelle photo
-        $fichier    = $request->file('photo');
-        $nomFichier = 'profil_' . $user->id . '_' . time() . '.' . $fichier->getClientOriginalExtension();
+        $fichier = $request->file('photo');
+        $nomFichier = 'profil_'.$user->id.'_'.time().'.'.$fichier->getClientOriginalExtension();
         $fichier->move(public_path('images/profils'), $nomFichier);
 
-        $user->photo_profil = '/images/profils/' . $nomFichier;
+        $user->photo_profil = '/images/profils/'.$nomFichier;
         $user->save();
 
         return response()->json([
-            'message'      => 'Photo mise à jour avec succès',
+            'message' => 'Photo mise à jour avec succès',
             'photo_profil' => $user->photo_profil,
-            'user'         => $user,
+            'user' => $user,
         ]);
     }
 }

@@ -16,13 +16,13 @@ return new class extends Migration
 
             // Expéditeur du message
             $table->foreignId('expediteur_id')
-                  ->constrained('users')
-                  ->onDelete('cascade');
+                ->constrained('users')
+                ->onDelete('cascade');
 
             // Destinataire du message
             $table->foreignId('destinataire_id')
-                  ->constrained('users')
-                  ->onDelete('cascade');
+                ->constrained('users')
+                ->onDelete('cascade');
 
             // Contenu du message
             $table->text('contenu');

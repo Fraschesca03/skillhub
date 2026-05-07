@@ -35,17 +35,33 @@ jobs:
           key: ${{ runner.os }}-m2-${{ hashFiles('authentification/**/pom.xml') }}
           restore-keys: ${{ runner.os }}-m2
 
-      - name: Build et tests
+      # 1 — Install : telecharger les dependances Maven
+      - name: Install · Maven dependencies
+        run: mvn -B dependency:go-offline
+
+      # 2 — Lint : analyse statique (Checkstyle via Maven plugin)
+      - name: Lint · Checkstyle
+        run: mvn -B checkstyle:check
+
+      # 3 — Test : execution des tests unitaires avec rapport
+      - name: Test · JUnit + couverture
         env:
           APP_MASTER_KEY: test_master_key_for_ci_only_32chars!
           JWT_SECRET: test_jwt_secret_for_ci_only_minimum_32_characters_required_here
-        run: mvn clean verify
+        run: mvn -B clean verify
 
       - name: Analyse SonarCloud
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: mvn sonar:sonar -Dsonar.host.url=https://sonarcloud.io
+
+      - name: Quality Gate — Auth Service
+        uses: sonarsource/sonarqube-quality-gate-action@v1.1.0
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        with:
+          scanMetadataReportFile: authentification/target/sonar/report-task.txt
 
   # JOB 2 — Backend Laravel (PHP 8.2 / PHPUnit / SonarCloud)
 
@@ -88,11 +104,16 @@ jobs:
           key: composer-${{ hashFiles('skillhub_CICD_backend/composer.lock') }}
           restore-keys: composer-
 
-      - name: Installer les dépendances Composer
+      # 1 — Install : dependances PHP via Composer
+      - name: Install · Composer dependencies
         run: composer install --prefer-dist --no-progress --no-interaction
 
-      - name: Lint PHP
-        run: find app routes -name "*.php" | xargs -n1 php -l
+      # 2 — Lint : verif syntaxe PHP + style PSR-12 (Laravel Pint, deja en dev-deps)
+      - name: Lint · php -l (syntaxe)
+        run: find app routes tests -name "*.php" | xargs -n1 php -l
+
+      - name: Lint · Pint (style PSR-12)
+        run: vendor/bin/pint --test
 
       - name: Générer le fichier .env de test
         run: |
@@ -114,7 +135,8 @@ jobs:
       - run: php artisan migrate --force
       - run: mkdir -p build/logs
 
-      - name: Tests PHPUnit avec couverture
+      # 3 — Test : PHPUnit + rapport JUnit + couverture clover
+      - name: Test · PHPUnit + couverture
         run: php artisan test --coverage-clover=build/logs/clover.xml --log-junit=build/logs/junit.xml
 
       - name: Analyse SonarCloud
@@ -125,21 +147,6 @@ jobs:
         with:
           projectBaseDir: skillhub_CICD_backend
 
-  # JOB 3 — Quality Gate global (attend les deux analyses Sonar)
-
-  quality-gate:
-    name: "Quality Gate SonarCloud (Auth + Backend)"
-    runs-on: ubuntu-latest
-    needs: [auth-test, backend-test]
-
-    steps:
-      - name: Quality Gate — Auth Service
-        uses: sonarsource/sonarqube-quality-gate-action@v1.1.0
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        with:
-          scanMetadataReportFile: authentification/target/sonar/report-task.txt
-
       - name: Quality Gate — Backend Laravel
         uses: sonarsource/sonarqube-quality-gate-action@v1.1.0
         env:
@@ -147,12 +154,12 @@ jobs:
         with:
           scanMetadataReportFile: skillhub_CICD_backend/.scannerwork/report-task.txt
 
-  # JOB 4 — Docker Auth (uniquement sur push, après Quality Gate)
+  # JOB 3 — Docker Auth (uniquement sur push, après tests + quality gate)
 
   docker-auth:
     name: "Auth · Build & Push Image Docker"
     runs-on: ubuntu-latest
-    needs: quality-gate
+    needs: auth-test
     if: github.event_name == 'push'
     permissions:
       contents: read
@@ -200,12 +207,12 @@ jobs:
           docker pull $IMAGE
           docker run --rm --entrypoint java $IMAGE -version
 
-  # JOB 5 — Docker Backend (uniquement sur push, après Quality Gate)
+  # JOB 4 — Docker Backend (uniquement sur push, après tests + quality gate)
 
   docker-backend:
     name: "Backend · Build & Push Image Docker"
     runs-on: ubuntu-latest
-    needs: quality-gate
+    needs: backend-test
     if: github.event_name == 'push'
     permissions:
       contents: read

@@ -32,6 +32,4 @@ use OpenApi\Attributes as OA;
 #[OA\Tag(name: 'Modules', description: "Modules d'une formation")]
 #[OA\Tag(name: 'Inscriptions', description: "Inscription d'un apprenant à une formation")]
 #[OA\Tag(name: 'Messages', description: 'Messagerie entre utilisateurs')]
-class Documentation
-{
-}
+class Documentation {}

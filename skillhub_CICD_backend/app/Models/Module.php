@@ -9,11 +9,11 @@ use OpenApi\Attributes as OA;
  * Module d'une formation. L'apprenant valide ses modules un par un, ce qui fait
  * progresser son inscription en pourcentage.
  *
- * @property int    $id
+ * @property int $id
  * @property string $titre
  * @property string $contenu
- * @property int    $ordre         position du module dans la formation (1, 2, 3, …)
- * @property int    $formation_id
+ * @property int $ordre position du module dans la formation (1, 2, 3, …)
+ * @property int $formation_id
  *
  * @author MU202612
  */

@@ -7,9 +7,9 @@ use App\Models\FormationVue;
 use App\Services\ActivityLogService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Tymon\JWTAuth\Facades\JWTAuth;
-use Tymon\JWTAuth\Exceptions\JWTException;
 use OpenApi\Attributes as OA;
+use Tymon\JWTAuth\Exceptions\JWTException;
+use Tymon\JWTAuth\Facades\JWTAuth;
 
 /**
  * Endpoints CRUD des formations + comptage des vues.
@@ -30,9 +30,6 @@ class FormationController extends Controller
      *
      * Utilise les query params recherche, categorie, niveau (facultatifs).
      * Renvoie un tableau JSON de formations.
-     *
-     * @param  Request  $request
-     * @return JsonResponse
      */
     #[OA\Get(
         path: '/api/formations',
@@ -55,8 +52,8 @@ class FormationController extends Controller
         if ($request->filled('recherche')) {
             $motCle = $request->input('recherche');
             $query->where(function ($q) use ($motCle) {
-                $q->where('titre', 'like', '%' . $motCle . '%')
-                    ->orWhere('description', 'like', '%' . $motCle . '%');
+                $q->where('titre', 'like', '%'.$motCle.'%')
+                    ->orWhere('description', 'like', '%'.$motCle.'%');
             });
         }
 
@@ -83,9 +80,8 @@ class FormationController extends Controller
      *
      * Utilise Formation, FormationVue, ActivityLogService et JWTAuth.
      *
-     * @param  Request  $request
-     * @param  mixed    $id  identifiant de la formation
-     * @return JsonResponse  la formation rafraîchie ou 404
+     * @param  mixed  $id  identifiant de la formation
+     * @return JsonResponse la formation rafraîchie ou 404
      */
     #[OA\Get(
         path: '/api/formations/{id}',
@@ -136,7 +132,7 @@ class FormationController extends Controller
      * - Log la création.
      *
      * @param  Request  $request  body : titre, description, categorie, niveau, prix, duree_heures
-     * @return JsonResponse  201 avec { message, formation }
+     * @return JsonResponse 201 avec { message, formation }
      */
     #[OA\Post(
         path: '/api/formations',
@@ -178,20 +174,20 @@ class FormationController extends Controller
         $request->validate($this->formationRules());
 
         $formation = Formation::create([
-            'titre'          => $request->titre,
-            'description'    => $request->description,
-            'categorie'      => $request->categorie,
-            'niveau'         => $request->niveau,
-            'prix'           => $request->prix ?? 0,
-            'duree_heures'   => $request->duree_heures ?? 0,
+            'titre' => $request->titre,
+            'description' => $request->description,
+            'categorie' => $request->categorie,
+            'niveau' => $request->niveau,
+            'prix' => $request->prix ?? 0,
+            'duree_heures' => $request->duree_heures ?? 0,
             'nombre_de_vues' => 0,
-            'formateur_id'   => $user->id,
+            'formateur_id' => $user->id,
         ]);
 
         ActivityLogService::creationFormation($formation->id, $user->id);
 
         return response()->json([
-            'message'   => 'Formation créée avec succès',
+            'message' => 'Formation créée avec succès',
             'formation' => $formation,
         ], 201);
     }
@@ -208,8 +204,8 @@ class FormationController extends Controller
      * - Log la modification avec ancien/nouveau.
      *
      * @param  Request  $request  body : mêmes champs que store()
-     * @param  mixed    $id       id de la formation
-     * @return JsonResponse  { message, formation } ou erreur
+     * @param  mixed  $id  id de la formation
+     * @return JsonResponse { message, formation } ou erreur
      */
     #[OA\Put(
         path: '/api/formations/{id}',
@@ -256,20 +252,20 @@ class FormationController extends Controller
         }
 
         $oldValues = [
-            'titre'       => $formation->titre,
+            'titre' => $formation->titre,
             'description' => $formation->description,
-            'categorie'   => $formation->categorie,
-            'niveau'      => $formation->niveau,
+            'categorie' => $formation->categorie,
+            'niveau' => $formation->niveau,
         ];
 
         $request->validate($this->formationRules());
 
         $formation->update([
-            'titre'        => $request->titre,
-            'description'  => $request->description,
-            'categorie'    => $request->categorie,
-            'niveau'       => $request->niveau,
-            'prix'         => $request->prix ?? $formation->prix,
+            'titre' => $request->titre,
+            'description' => $request->description,
+            'categorie' => $request->categorie,
+            'niveau' => $request->niveau,
+            'prix' => $request->prix ?? $formation->prix,
             'duree_heures' => $request->duree_heures ?? $formation->duree_heures,
         ]);
 
@@ -278,15 +274,15 @@ class FormationController extends Controller
             $user->id,
             $oldValues,
             [
-                'titre'       => $request->titre,
+                'titre' => $request->titre,
                 'description' => $request->description,
-                'categorie'   => $request->categorie,
-                'niveau'      => $request->niveau,
+                'categorie' => $request->categorie,
+                'niveau' => $request->niveau,
             ]
         );
 
         return response()->json([
-            'message'   => 'Formation mise à jour avec succès',
+            'message' => 'Formation mise à jour avec succès',
             'formation' => $formation,
         ]);
     }
@@ -301,7 +297,6 @@ class FormationController extends Controller
      * - Log la suppression avant le delete (sinon on perd l'id).
      *
      * @param  mixed  $id
-     * @return JsonResponse
      */
     #[OA\Delete(
         path: '/api/formations/{id}',
@@ -350,11 +345,11 @@ class FormationController extends Controller
     private function formationRules(): array
     {
         return [
-            'titre'        => 'required|string|max:255',
-            'description'  => 'required|string',
-            'categorie'    => 'required|in:developpement_web,data,design,marketing,devops,autre',
-            'niveau'       => 'required|in:debutant,intermediaire,avance',
-            'prix'         => 'nullable|numeric|min:0',
+            'titre' => 'required|string|max:255',
+            'description' => 'required|string',
+            'categorie' => 'required|in:developpement_web,data,design,marketing,devops,autre',
+            'niveau' => 'required|in:debutant,intermediaire,avance',
+            'prix' => 'nullable|numeric|min:0',
             'duree_heures' => 'nullable|integer|min:0',
         ];
     }
@@ -370,9 +365,9 @@ class FormationController extends Controller
      * Cette logique évite qu'un même apprenant gonfle artificiellement les vues
      * en rechargeant la page.
      *
-     * @param  Request    $request        utilisé pour récupérer l'IP
-     * @param  Formation  $formation      la formation à vue
-     * @param  int|null   $utilisateurId  null si non connecté
+     * @param  Request  $request  utilisé pour récupérer l'IP
+     * @param  Formation  $formation  la formation à vue
+     * @param  int|null  $utilisateurId  null si non connecté
      */
     private function enregistrerVue(Request $request, Formation $formation, ?int $utilisateurId): void
     {
@@ -383,9 +378,9 @@ class FormationController extends Controller
 
             if (! $dejaVue) {
                 FormationVue::create([
-                    'formation_id'   => $formation->id,
+                    'formation_id' => $formation->id,
                     'utilisateur_id' => $utilisateurId,
-                    'ip'             => $request->ip(),
+                    'ip' => $request->ip(),
                 ]);
                 $formation->increment('nombre_de_vues');
             }
@@ -397,9 +392,9 @@ class FormationController extends Controller
 
             if (! $dejaVueIp) {
                 FormationVue::create([
-                    'formation_id'   => $formation->id,
+                    'formation_id' => $formation->id,
                     'utilisateur_id' => null,
-                    'ip'             => $request->ip(),
+                    'ip' => $request->ip(),
                 ]);
                 $formation->increment('nombre_de_vues');
             }
