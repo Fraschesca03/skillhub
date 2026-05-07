@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(./mvnw javadoc:javadoc -Dadditionalparam=\"-Xdoclint:all\")",
+      "Read(//tmp/**)",
+      "Bash(start authentification/target/reports/apidocs/index.html)",
+      "Bash(start target/reports/apidocs/index.html)",
+      "Bash(./mvnw test-compile *)",
+      "Bash(./mvnw test *)",
+      "Bash(composer require *)",
+      "Bash(jobs -l)"
+    ]
+  }
+}

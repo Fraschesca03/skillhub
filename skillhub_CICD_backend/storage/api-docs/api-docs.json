@@ -1,0 +1,1109 @@
+{
+    "openapi": "3.0.0",
+    "info": {
+        "title": "SkillHub API",
+        "description": "API REST de la plateforme SkillHub : authentification, formations, modules, inscriptions et messagerie.",
+        "contact": {
+            "name": "MU202612"
+        },
+        "version": "1.0.0"
+    },
+    "servers": [
+        {
+            "url": "http://localhost:8000",
+            "description": "Serveur local"
+        }
+    ],
+    "paths": {
+        "/api/register": {
+            "post": {
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Inscrire un utilisateur",
+                "description": "Crée un nouveau compte et renvoie un JWT directement utilisable.\n\nÉtapes :\n- Valide les champs requis (nom, email, password, role).\n- Crée le User en base (le password est hashé par le cast Eloquent).\n- Émet un JWT via JWTAuth::fromUser pour que le front enchaîne sans re-login.\n\nUtilise le modèle User et la facade JWTAuth.\nRenvoie un JSON { message, user, token } avec status 201.",
+                "operationId": "8a56853624e025573120a09a4c75d468",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "nom",
+                                    "email",
+                                    "password",
+                                    "role"
+                                ],
+                                "properties": {
+                                    "nom": {
+                                        "type": "string",
+                                        "example": "Alice Dupont"
+                                    },
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email",
+                                        "example": "alice@gmail.com"
+                                    },
+                                    "password": {
+                                        "type": "string",
+                                        "format": "password",
+                                        "example": "MotDePasse123!"
+                                    },
+                                    "role": {
+                                        "type": "string",
+                                        "example": "apprenant",
+                                        "enum": [
+                                            "apprenant",
+                                            "formateur"
+                                        ]
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Utilisateur créé"
+                    },
+                    "422": {
+                        "description": "Champ invalide ou email déjà utilisé"
+                    }
+                }
+            }
+        },
+        "/api/login": {
+            "post": {
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Se connecter et obtenir un JWT",
+                "description": "Vérifie email + password et renvoie un JWT en cas de succès.\n\nÉtapes :\n- Valide email et password.\n- Tente JWTAuth::attempt avec ces credentials.\n- Si l'attempt rate, renvoie 401 sans détail (on ne dit pas ce qui a foiré).\n\nUtilise la facade JWTAuth et auth()->user() pour récupérer le profil.\nRenvoie { message, token, user } ou 401 en cas d'échec.",
+                "operationId": "a3b306d14572d1f4bd6c064b3233e7b8",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "email",
+                                    "password"
+                                ],
+                                "properties": {
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email"
+                                    },
+                                    "password": {
+                                        "type": "string",
+                                        "format": "password"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Connexion réussie"
+                    },
+                    "401": {
+                        "description": "Email ou mot de passe incorrect"
+                    }
+                }
+            }
+        },
+        "/api/profile": {
+            "get": {
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Profil de l'utilisateur connecté",
+                "description": "Renvoie le profil de l'utilisateur identifié par le token.\n\nÉtapes :\n- Lit le token via authentifierUtilisateur (helper du parent).\n- Si le token est invalide, renvoie l'erreur déjà préparée.\n- Sinon renvoie { user }.",
+                "operationId": "d32e56b6274eb68e980da6d91fbe9fd8",
+                "responses": {
+                    "200": {
+                        "description": "Profil renvoyé"
+                    },
+                    "401": {
+                        "description": "Token invalide ou absent"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/logout": {
+            "post": {
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Invalider le token courant",
+                "description": "Invalide le token JWT côté serveur.\n\nLe token est ajouté à la blacklist, donc même si le client le garde\nil ne pourra plus l'utiliser.",
+                "operationId": "fe8f3429cd6979b3b4517e186505f9f9",
+                "responses": {
+                    "200": {
+                        "description": "Déconnexion réussie"
+                    },
+                    "401": {
+                        "description": "Token invalide"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/profil/photo": {
+            "post": {
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Uploader une photo de profil",
+                "description": "Remplace la photo de profil de l'utilisateur connecté.\n\nÉtapes :\n- Vérifie le JWT.\n- Valide le fichier (image, max 2 Mo, formats jpeg/png/jpg/gif).\n- Supprime l'ancienne photo si elle existe sur disque.\n- Déplace le nouveau fichier vers public/images/profils avec un nom unique\n  (profil_{userId}_{timestamp}.{ext}).\n- Met à jour user.photo_profil et persiste.\n\nUtilise public_path() pour le stockage et $request->file('photo').\nRenvoie { message, photo_profil, user }.",
+                "operationId": "446a08dbe9d8b2af53ec54e79c3158cf",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "required": [
+                                    "photo"
+                                ],
+                                "properties": {
+                                    "photo": {
+                                        "type": "string",
+                                        "format": "binary"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Photo mise à jour"
+                    },
+                    "401": {
+                        "description": "Non authentifié"
+                    },
+                    "422": {
+                        "description": "Fichier invalide"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/formations": {
+            "get": {
+                "tags": [
+                    "Formations"
+                ],
+                "summary": "Lister les formations",
+                "description": "Renvoie la liste des formations, avec filtres optionnels.\n\nÉtapes :\n- Charge formations + relation formateur (id, nom, email) + count des inscriptions.\n- Applique les filtres présents dans la query string : recherche (titre OR description),\n  categorie, niveau.\n\nUtilise les query params recherche, categorie, niveau (facultatifs).\nRenvoie un tableau JSON de formations.",
+                "operationId": "f460eedd9fef9c212ce48031165d8763",
+                "parameters": [
+                    {
+                        "name": "recherche",
+                        "in": "query",
+                        "description": "Mot-clé sur titre ou description",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "categorie",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "developpement_web",
+                                "data",
+                                "design",
+                                "marketing",
+                                "devops",
+                                "autre"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "niveau",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "debutant",
+                                "intermediaire",
+                                "avance"
+                            ]
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Liste des formations"
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "Formations"
+                ],
+                "summary": "Créer une formation (formateur uniquement)",
+                "description": "Crée une formation. Réservé aux formateurs.\n\nÉtapes :\n- Vérifie le JWT, refuse si pas formateur (403).\n- Valide les champs via formationRules().\n- Crée la formation avec formateur_id = user connecté, nombre_de_vues = 0.\n- Log la création.",
+                "operationId": "cfa2245cccd076486e2ae1d03f8b2d30",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "titre",
+                                    "description",
+                                    "categorie",
+                                    "niveau"
+                                ],
+                                "properties": {
+                                    "titre": {
+                                        "type": "string"
+                                    },
+                                    "description": {
+                                        "type": "string"
+                                    },
+                                    "categorie": {
+                                        "type": "string",
+                                        "enum": [
+                                            "developpement_web",
+                                            "data",
+                                            "design",
+                                            "marketing",
+                                            "devops",
+                                            "autre"
+                                        ]
+                                    },
+                                    "niveau": {
+                                        "type": "string",
+                                        "enum": [
+                                            "debutant",
+                                            "intermediaire",
+                                            "avance"
+                                        ]
+                                    },
+                                    "prix": {
+                                        "type": "number"
+                                    },
+                                    "duree_heures": {
+                                        "type": "integer"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Formation créée"
+                    },
+                    "401": {
+                        "description": "Non authentifié"
+                    },
+                    "403": {
+                        "description": "Pas formateur"
+                    },
+                    "422": {
+                        "description": "Données invalides"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/formations/{id}": {
+            "get": {
+                "tags": [
+                    "Formations"
+                ],
+                "summary": "Détail d'une formation",
+                "description": "Affiche une formation et incrémente son compteur de vues.\n\nÉtapes :\n- Cherche la formation par id (avec formateur + count d'inscriptions).\n- Si pas trouvée, renvoie 404.\n- Tente d'identifier l'utilisateur (token optionnel — la route est publique).\n- Appelle enregistrerVue (incrémente seulement si pas déjà vue par ce user/IP).\n- Log la consultation via ActivityLogService.\n\nUtilise Formation, FormationVue, ActivityLogService et JWTAuth.",
+                "operationId": "22e3ca1b9b7c7e19066d22a4b0a6f03d",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "identifiant de la formation",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Formation"
+                    },
+                    "404": {
+                        "description": "Formation introuvable"
+                    }
+                }
+            },
+            "put": {
+                "tags": [
+                    "Formations"
+                ],
+                "summary": "Modifier une formation (formateur propriétaire)",
+                "description": "Met à jour une formation existante. Réservé au formateur propriétaire.\n\nÉtapes :\n- Vérifie le JWT.\n- Cherche la formation, 404 sinon.\n- Refuse si l'utilisateur n'est pas le formateur propriétaire (403).\n- Capture les anciennes valeurs (pour le log de diff).\n- Valide les champs et persiste.\n- Log la modification avec ancien/nouveau.",
+                "operationId": "ba786ce28ed5d6866b6e924fcc63ccf0",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "id de la formation",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "titre": {
+                                        "type": "string"
+                                    },
+                                    "description": {
+                                        "type": "string"
+                                    },
+                                    "categorie": {
+                                        "type": "string"
+                                    },
+                                    "niveau": {
+                                        "type": "string"
+                                    },
+                                    "prix": {
+                                        "type": "number"
+                                    },
+                                    "duree_heures": {
+                                        "type": "integer"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Formation modifiée"
+                    },
+                    "403": {
+                        "description": "Pas propriétaire"
+                    },
+                    "404": {
+                        "description": "Formation introuvable"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Formations"
+                ],
+                "summary": "Supprimer une formation",
+                "description": "Supprime une formation. Réservé au formateur propriétaire.\n\nÉtapes :\n- Vérifie le JWT.\n- Cherche la formation, 404 sinon.\n- Refuse si pas propriétaire (403).\n- Log la suppression avant le delete (sinon on perd l'id).",
+                "operationId": "63a9445f0cc02cd1dac03925483d8175",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Formation supprimée"
+                    },
+                    "403": {
+                        "description": "Pas propriétaire"
+                    },
+                    "404": {
+                        "description": "Formation introuvable"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/formations/{id}/inscription": {
+            "post": {
+                "tags": [
+                    "Inscriptions"
+                ],
+                "summary": "S'inscrire à une formation (apprenant uniquement, max 5)",
+                "description": "Inscrit l'apprenant connecté à une formation.\n\nÉtapes :\n- Vérifie le JWT.\n- Refuse si pas apprenant (403).\n- 404 si la formation n'existe pas.\n- 409 si l'apprenant est déjà inscrit à cette formation.\n- 400 si l'apprenant a déjà 5 formations en cours (limite métier).\n- Sinon crée l'inscription avec progression à 0 et log l'événement.\n\nRenvoie aussi le nombre de formations restantes que l'apprenant peut\nencore suivre, pratique pour afficher un compteur côté front.",
+                "operationId": "2dc9a1cc6dc9d812479c33692e6c009a",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Inscription réussie"
+                    },
+                    "400": {
+                        "description": "Limite de 5 formations atteinte"
+                    },
+                    "403": {
+                        "description": "Pas apprenant"
+                    },
+                    "404": {
+                        "description": "Formation introuvable"
+                    },
+                    "409": {
+                        "description": "Déjà inscrit"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Inscriptions"
+                ],
+                "summary": "Se désinscrire d'une formation",
+                "description": "Désinscrit l'apprenant connecté d'une formation.\n\nÉtapes :\n- Vérifie le JWT.\n- Refuse si pas apprenant (403).\n- Cherche l'inscription pour le couple (user, formation).\n- 404 si pas trouvée, sinon supprime.",
+                "operationId": "6ff523ac2c06be1613131c4b99cdabe4",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Désinscription réussie"
+                    },
+                    "403": {
+                        "description": "Pas apprenant"
+                    },
+                    "404": {
+                        "description": "Inscription introuvable"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/apprenant/formations": {
+            "get": {
+                "tags": [
+                    "Inscriptions"
+                ],
+                "summary": "Mes formations en cours",
+                "description": "Renvoie toutes les formations suivies par l'apprenant connecté,\navec la formation et son formateur (id, nom, email) chargés.\n\nSert de tableau de bord apprenant.",
+                "operationId": "0adc12194362763212e93a24e2423005",
+                "responses": {
+                    "200": {
+                        "description": "Liste des inscriptions de l'apprenant"
+                    },
+                    "403": {
+                        "description": "Pas apprenant"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/messages/non-lus": {
+            "get": {
+                "tags": [
+                    "Messages"
+                ],
+                "summary": "Nombre de messages non lus",
+                "description": "Renvoie le nombre de messages non lus reçus par l'utilisateur connecté.\n\nPratique pour afficher un badge \"X messages\" en haut de l'app.",
+                "operationId": "537179891317f673b695e97a27066f2d",
+                "responses": {
+                    "200": {
+                        "description": "Compteur renvoyé"
+                    },
+                    "401": {
+                        "description": "Non authentifié"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/messages/conversations": {
+            "get": {
+                "tags": [
+                    "Messages"
+                ],
+                "summary": "Liste des conversations",
+                "description": "Renvoie la liste des conversations de l'utilisateur (une ligne par interlocuteur).\n\nÉtapes :\n- Récupère tous les messages où le user est expéditeur OU destinataire,\n  avec leurs relations expediteur et destinataire, triés du plus récent au plus ancien.\n- Itère sur les messages et regroupe par interlocuteur :\n  le 1er rencontré (donc le plus récent) sert d'aperçu.\n- Compte au passage les messages non lus de cet interlocuteur vers le user.\n\nLe résultat ne contient pas l'historique complet, juste un résumé par discussion.",
+                "operationId": "8bc13f1bf3394ef201055b9d2444b959",
+                "responses": {
+                    "200": {
+                        "description": "Conversations triées du plus récent au plus ancien"
+                    },
+                    "401": {
+                        "description": "Non authentifié"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/messages/{interlocuteurId}": {
+            "get": {
+                "tags": [
+                    "Messages"
+                ],
+                "summary": "Historique d'une conversation et marquage en lu",
+                "description": "Renvoie l'historique complet entre l'utilisateur connecté et un interlocuteur.\n\nEffets de bord : passe à lu=true tous les messages reçus de cet interlocuteur.\nSans ça, le badge \"non lus\" ne baisserait jamais.\n\nLes messages sont triés du plus ancien au plus récent (ordre de lecture).",
+                "operationId": "4d9c1d6cc4ed589f0f154ff2a4d9b70c",
+                "parameters": [
+                    {
+                        "name": "interlocuteurId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Messages renvoyés et marqués lus"
+                    },
+                    "401": {
+                        "description": "Non authentifié"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/messages": {
+            "post": {
+                "tags": [
+                    "Messages"
+                ],
+                "summary": "Envoyer un message",
+                "description": "Envoie un message à un autre utilisateur.\n\nÉtapes :\n- Vérifie le JWT.\n- Valide destinataire_id (doit exister) et contenu (max 2000 caractères).\n- Détermine si c'est le premier échange entre les deux (aucun message dans aucun sens).\n- Crée le message avec lu=false.\n- Recharge les relations expediteur/destinataire (juste id et nom) pour la réponse.\n- Si premier message, déclenche un mail à l'autre utilisateur via NouveauMessageMail.",
+                "operationId": "5157393e27dfe17ac964293ea7dd578e",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "destinataire_id",
+                                    "contenu"
+                                ],
+                                "properties": {
+                                    "destinataire_id": {
+                                        "type": "integer"
+                                    },
+                                    "contenu": {
+                                        "type": "string",
+                                        "maxLength": 2000
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Message créé"
+                    },
+                    "401": {
+                        "description": "Non authentifié"
+                    },
+                    "422": {
+                        "description": "Données invalides"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/messages/interlocuteurs": {
+            "get": {
+                "tags": [
+                    "Messages"
+                ],
+                "summary": "Liste des utilisateurs autorisés à recevoir un message",
+                "description": "Renvoie les utilisateurs avec qui l'utilisateur connecté a le droit d'échanger.\n\nRègle métier :\n- Si formateur : tous les apprenants inscrits à au moins une de ses formations.\n- Si apprenant : tous les formateurs des formations auxquelles il est inscrit.\n\nÉvite de pouvoir messager n'importe qui (anti-spam, anti-harcèlement).",
+                "operationId": "71ad404246a866ab6f393d4d0995ed61",
+                "responses": {
+                    "200": {
+                        "description": "Liste filtrée"
+                    },
+                    "401": {
+                        "description": "Non authentifié"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/formations/{id}/modules": {
+            "get": {
+                "tags": [
+                    "Modules"
+                ],
+                "summary": "Lister les modules d'une formation",
+                "description": "Renvoie tous les modules d'une formation, triés par champ ordre.\n\nRoute publique (pas besoin de token). Utile à l'apprenant qui découvre\nle contenu avant de s'inscrire.",
+                "operationId": "85724f7a8d13fdad05d17a528a818085",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Liste des modules"
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "Modules"
+                ],
+                "summary": "Créer un module (formateur propriétaire)",
+                "description": "Crée un module dans une formation. Seul le formateur propriétaire peut le faire.\n\nÉtapes :\n- Vérifie le JWT.\n- Refuse si pas formateur (403).\n- Vérifie que la formation existe (404 sinon) et qu'elle appartient au formateur (403 sinon).\n- Valide titre / contenu / ordre.\n- Crée le module rattaché à la formation.",
+                "operationId": "57fbbc92e0390fb2370823a8b57f47bb",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "titre",
+                                    "contenu",
+                                    "ordre"
+                                ],
+                                "properties": {
+                                    "titre": {
+                                        "type": "string"
+                                    },
+                                    "contenu": {
+                                        "type": "string"
+                                    },
+                                    "ordre": {
+                                        "type": "integer",
+                                        "minimum": 1
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Module créé"
+                    },
+                    "403": {
+                        "description": "Non autorisé"
+                    },
+                    "404": {
+                        "description": "Formation introuvable"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/modules/{id}": {
+            "put": {
+                "tags": [
+                    "Modules"
+                ],
+                "summary": "Modifier un module",
+                "description": "Met à jour un module. Réservé au formateur propriétaire de la formation.\n\nÉtapes :\n- Délègue la vérification (auth + rôle + propriété) à chargerModuleAutorise().\n- Si OK, valide les champs et persiste.",
+                "operationId": "0446fed3c1bef7b517980c1eb97eae47",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "id du module",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "titre": {
+                                        "type": "string"
+                                    },
+                                    "contenu": {
+                                        "type": "string"
+                                    },
+                                    "ordre": {
+                                        "type": "integer"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Module modifié"
+                    },
+                    "403": {
+                        "description": "Non autorisé"
+                    },
+                    "404": {
+                        "description": "Module introuvable"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Modules"
+                ],
+                "summary": "Supprimer un module",
+                "description": "Supprime un module. Mêmes règles d'autorisation que update().",
+                "operationId": "613f8e5cfa8d75c4da11dd09a0034ffa",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Module supprimé"
+                    },
+                    "403": {
+                        "description": "Non autorisé"
+                    },
+                    "404": {
+                        "description": "Module introuvable"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/modules/{id}/terminer": {
+            "post": {
+                "tags": [
+                    "Modules"
+                ],
+                "summary": "Marquer un module comme terminé (apprenant inscrit)",
+                "description": "Marque un module comme terminé par l'apprenant connecté et recalcule sa progression.\n\nÉtapes :\n- Vérifie le JWT.\n- Refuse si l'utilisateur n'est pas apprenant (403).\n- Cherche le module (404 sinon).\n- Vérifie que l'apprenant est bien inscrit à la formation parent (403 sinon).\n- Si déjà terminé, renvoie un message + la progression actuelle (idempotent).\n- Sinon, ajoute la liaison module-user via la pivot avec termine=true.\n- Recalcule progression = (modules terminés / total modules) * 100, arrondi.\n- Met à jour inscription.progression.\n\nUtilise les modèles Module, Inscription et la relation user->modulesTermines().",
+                "operationId": "eeb97b8a6ecada70172f015b1785d4b6",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "id du module",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Module terminé, progression renvoyée"
+                    },
+                    "403": {
+                        "description": "Pas apprenant ou pas inscrit"
+                    },
+                    "404": {
+                        "description": "Module introuvable"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        }
+    },
+    "components": {
+        "schemas": {
+            "Formation": {
+                "title": "Formation",
+                "properties": {
+                    "id": {
+                        "description": "Formation proposée par un formateur. Contient des modules et reçoit des inscriptions.",
+                        "type": "integer"
+                    },
+                    "titre": {
+                        "type": "string"
+                    },
+                    "description": {
+                        "type": "string"
+                    },
+                    "categorie": {
+                        "type": "string",
+                        "enum": [
+                            "developpement_web",
+                            "data",
+                            "design",
+                            "marketing",
+                            "devops",
+                            "autre"
+                        ]
+                    },
+                    "niveau": {
+                        "type": "string",
+                        "enum": [
+                            "debutant",
+                            "intermediaire",
+                            "avance"
+                        ]
+                    },
+                    "prix": {
+                        "type": "number"
+                    },
+                    "duree_heures": {
+                        "type": "integer"
+                    },
+                    "nombre_de_vues": {
+                        "type": "integer"
+                    },
+                    "formateur_id": {
+                        "type": "integer"
+                    }
+                },
+                "type": "object"
+            },
+            "Inscription": {
+                "title": "Inscription",
+                "properties": {
+                    "id": {
+                        "description": "Inscription d'un apprenant à une formation. Porte le pourcentage de progression.",
+                        "type": "integer"
+                    },
+                    "utilisateur_id": {
+                        "type": "integer"
+                    },
+                    "formation_id": {
+                        "type": "integer"
+                    },
+                    "progression": {
+                        "type": "integer",
+                        "maximum": 100,
+                        "minimum": 0
+                    }
+                },
+                "type": "object"
+            },
+            "Message": {
+                "title": "Message",
+                "properties": {
+                    "_id": {
+                        "description": "Message de la messagerie. Stocké dans MongoDB (collection \"messages\") pour\nabsorber le volume sans gonfler la base MySQL.\n\nLes ids expediteur_id et destinataire_id référencent des lignes de la table\nMySQL users — il n'y a pas de contrainte de clé étrangère côté MongoDB,\nc'est l'application qui garantit la cohérence.",
+                        "type": "string"
+                    },
+                    "expediteur_id": {
+                        "type": "integer"
+                    },
+                    "destinataire_id": {
+                        "type": "integer"
+                    },
+                    "contenu": {
+                        "type": "string",
+                        "maxLength": 2000
+                    },
+                    "lu": {
+                        "type": "boolean"
+                    }
+                },
+                "type": "object"
+            },
+            "Module": {
+                "title": "Module",
+                "properties": {
+                    "id": {
+                        "description": "Module d'une formation. L'apprenant valide ses modules un par un, ce qui fait\nprogresser son inscription en pourcentage.",
+                        "type": "integer"
+                    },
+                    "titre": {
+                        "type": "string"
+                    },
+                    "contenu": {
+                        "type": "string"
+                    },
+                    "ordre": {
+                        "type": "integer",
+                        "minimum": 1
+                    },
+                    "formation_id": {
+                        "type": "integer"
+                    }
+                },
+                "type": "object"
+            },
+            "User": {
+                "title": "User",
+                "properties": {
+                    "id": {
+                        "description": "Utilisateur de la plateforme. Peut être apprenant ou formateur.\n\nImplémente JWTSubject pour que tymon/jwt-auth sache générer un token à partir d'un User.",
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "nom": {
+                        "type": "string",
+                        "example": "Alice Dupont"
+                    },
+                    "email": {
+                        "type": "string",
+                        "format": "email"
+                    },
+                    "role": {
+                        "type": "string",
+                        "enum": [
+                            "apprenant",
+                            "formateur"
+                        ]
+                    },
+                    "photo_profil": {
+                        "type": "string",
+                        "nullable": true
+                    }
+                },
+                "type": "object"
+            }
+        },
+        "securitySchemes": {
+            "bearerAuth": {
+                "type": "http",
+                "description": "Token JWT renvoyé par /api/login. Préfixer avec 'Bearer '.",
+                "bearerFormat": "JWT",
+                "scheme": "bearer"
+            }
+        }
+    },
+    "tags": [
+        {
+            "name": "Auth",
+            "description": "Inscription, connexion, profil"
+        },
+        {
+            "name": "Formations",
+            "description": "CRUD des formations"
+        },
+        {
+            "name": "Modules",
+            "description": "Modules d'une formation"
+        },
+        {
+            "name": "Inscriptions",
+            "description": "Inscription d'un apprenant à une formation"
+        },
+        {
+            "name": "Messages",
+            "description": "Messagerie entre utilisateurs"
+        }
+    ]
+}
