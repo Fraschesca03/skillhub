@@ -1,0 +1,251 @@
+name: CI - SkillHub (Auth + Backend)
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+    branches: [main, dev]
+
+env:
+  REGISTRY: ghcr.io
+
+# JOB 1 — Auth Service (Spring Boot / Java / Maven)
+
+jobs:
+  auth-test:
+    name: "Auth · Build, Tests & SonarCloud"
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: authentification
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: actions/cache@v4
+        with:
+          path: ~/.m2
+          key: ${{ runner.os }}-m2-${{ hashFiles('authentification/**/pom.xml') }}
+          restore-keys: ${{ runner.os }}-m2
+
+      - name: Build et tests
+        env:
+          APP_MASTER_KEY: test_master_key_for_ci_only_32chars!
+          JWT_SECRET: test_jwt_secret_for_ci_only_minimum_32_characters_required_here
+        run: mvn clean verify
+
+      - name: Analyse SonarCloud
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: mvn sonar:sonar -Dsonar.host.url=https://sonarcloud.io
+
+  # JOB 2 — Backend Laravel (PHP 8.2 / PHPUnit / SonarCloud)
+
+  backend-test:
+    name: "Backend · Lint, Tests & SonarCloud"
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: skillhub_CICD_backend
+
+    services:
+      mysql:
+        image: mysql:8
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: skillhub_test
+        ports: ["3306:3306"]
+        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
+      mongodb:
+        image: mongo:6
+        ports: ["27017:27017"]
+        options: >-
+          --health-cmd "mongosh --eval 'db.runCommand(\"ping\").ok'"
+          --health-interval 10s --health-timeout 5s --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.2"
+          extensions: mbstring, xml, pdo_mysql, pdo_sqlite, mongodb-2.2.0, pcov, gd
+          coverage: pcov
+
+      - uses: actions/cache@v4
+        with:
+          path: skillhub_CICD_backend/vendor
+          key: composer-${{ hashFiles('skillhub_CICD_backend/composer.lock') }}
+          restore-keys: composer-
+
+      - name: Installer les dépendances Composer
+        run: composer install --prefer-dist --no-progress --no-interaction
+
+      - name: Lint PHP
+        run: find app routes -name "*.php" | xargs -n1 php -l
+
+      - name: Générer le fichier .env de test
+        run: |
+          cp .env.example .env
+          sed -i 's|^APP_ENV=.*|APP_ENV=testing|' .env
+          sed -i 's|^APP_DEBUG=.*|APP_DEBUG=true|' .env
+          sed -i 's|^DB_HOST=.*|DB_HOST=127.0.0.1|' .env
+          sed -i 's|^DB_DATABASE=.*|DB_DATABASE=skillhub_test|' .env
+          sed -i 's|^DB_USERNAME=.*|DB_USERNAME=root|' .env
+          sed -i 's|^DB_PASSWORD=.*|DB_PASSWORD=root|' .env
+          sed -i 's|^MONGO_HOST=.*|MONGO_HOST=127.0.0.1|' .env
+          sed -i 's|^MONGO_DATABASE=.*|MONGO_DATABASE=skillhub_test|' .env
+          sed -i 's|^CACHE_STORE=.*|CACHE_STORE=array|' .env
+          sed -i 's|^SESSION_DRIVER=.*|SESSION_DRIVER=array|' .env
+          sed -i 's|^QUEUE_CONNECTION=.*|QUEUE_CONNECTION=sync|' .env
+          echo "JWT_SECRET=skillhub_ci_test_secret_key_32chars_ok" >> .env
+
+      - run: php artisan key:generate
+      - run: php artisan migrate --force
+      - run: mkdir -p build/logs
+
+      - name: Tests PHPUnit avec couverture
+        run: php artisan test --coverage-clover=build/logs/clover.xml --log-junit=build/logs/junit.xml
+
+      - name: Analyse SonarCloud
+        uses: SonarSource/sonarqube-scan-action@v4
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN_BACKEND_LARAVEL }}
+        with:
+          projectBaseDir: skillhub_CICD_backend
+
+  # JOB 3 — Quality Gate global (attend les deux analyses Sonar)
+
+  quality-gate:
+    name: "Quality Gate SonarCloud (Auth + Backend)"
+    runs-on: ubuntu-latest
+    needs: [auth-test, backend-test]
+
+    steps:
+      - name: Quality Gate — Auth Service
+        uses: sonarsource/sonarqube-quality-gate-action@v1.1.0
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        with:
+          scanMetadataReportFile: authentification/target/sonar/report-task.txt
+
+      - name: Quality Gate — Backend Laravel
+        uses: sonarsource/sonarqube-quality-gate-action@v1.1.0
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN_BACKEND_LARAVEL }}
+        with:
+          scanMetadataReportFile: skillhub_CICD_backend/.scannerwork/report-task.txt
+
+  # JOB 4 — Docker Auth (uniquement sur push, après Quality Gate)
+
+  docker-auth:
+    name: "Auth · Build & Push Image Docker"
+    runs-on: ubuntu-latest
+    needs: quality-gate
+    if: github.event_name == 'push'
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Lowercase owner
+        id: owner
+        run: echo "value=$(echo ${{ github.repository_owner }} | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ steps.owner.outputs.value }}/skillhub-auth
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=sha,prefix=sha-,format=short
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - uses: docker/build-push-action@v5
+        with:
+          context: authentification
+          target: runtime
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max,ignore-error=true
+
+      - name: Health check
+        run: |
+          OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          IMAGE=ghcr.io/$OWNER/skillhub-auth:sha-$(echo ${{ github.sha }} | cut -c1-7)
+          docker pull $IMAGE
+          docker run --rm --entrypoint java $IMAGE -version
+
+  # JOB 5 — Docker Backend (uniquement sur push, après Quality Gate)
+
+  docker-backend:
+    name: "Backend · Build & Push Image Docker"
+    runs-on: ubuntu-latest
+    needs: quality-gate
+    if: github.event_name == 'push'
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ github.repository_owner }}/skillhub-api
+          tags: |
+            type=ref,event=branch
+            type=sha,format=short,prefix=sha-
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - uses: docker/build-push-action@v5
+        with:
+          context: skillhub_CICD_backend
+          target: runtime
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max,ignore-error=true
+
+      - name: Health check
+        run: |
+          OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          IMAGE=ghcr.io/$OWNER/skillhub-api:sha-$(echo ${{ github.sha }} | cut -c1-7)
+          docker pull $IMAGE
+          docker run --rm --entrypoint php $IMAGE -v
+          docker run --rm --entrypoint php $IMAGE -m | grep -E "pdo_mysql|mongodb|gd|mbstring"
+          docker run --rm --entrypoint php $IMAGE artisan --version
