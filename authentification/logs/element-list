@@ -1,0 +1,6 @@
+com.projetAuthentification.authentification
+com.projetAuthentification.authentification.controller
+com.projetAuthentification.authentification.entity
+com.projetAuthentification.authentification.exception
+com.projetAuthentification.authentification.repository
+com.projetAuthentification.authentification.service
