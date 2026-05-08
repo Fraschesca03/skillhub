@@ -13,4 +13,4 @@
 Thumbs.db
 
 # Logs locaux
-*.log
+*.log".claude/" 
