@@ -279,3 +279,40 @@ Ces évolutions sont déjà discutées, elles ne sont pas appliquées dans cette
 - **`tests/Feature/ModuleEtInscriptionControllerTest.php`** — tests couvrant la nouvelle règle
 - **`.github/workflows/ci.yml`** — pipeline CI/CD avec étape de test explicite sur la règle des 5 inscriptions
 - **`README.md`** — ce fichier
+
+---
+
+## 9. Déclaration d'utilisation d'une IA
+
+J'ai rédigé moi-même la documentation technique et le contenu de ce projet. J'ai utilisé une IA (ChatGPT) uniquement pour reformuler certains passages quand je n'étais pas satisfait de la tournure, corriger des fautes de français, et clarifier des phrases trop longues. Le fond, les choix techniques et les explications viennent de mon travail sur le projet.
+
+Voici les prompts que j'ai utilisés et un résumé de la réponse fournie par l'IA :
+
+### Prompt 1
+> Reformule ce paragraphe pour qu'il soit plus clair pour un dev junior, sans perdre les informations techniques.
+
+L'IA a proposé une version plus courte du paragraphe, en remplaçant deux phrases techniques par une seule plus simple, et en remplaçant le mot "concentrer" par "regrouper". J'ai gardé sa version pour la première phrase et reformulé le reste à ma manière.
+
+### Prompt 2
+> Corrige les fautes d'orthographe et améliore la fluidité de ce passage en gardant un ton professionnel mais accessible.
+
+L'IA a corrigé deux accords sujet-verbe et trois fautes d'accent, et a suggéré de remplacer plusieurs virgules par des points pour casser des phrases trop longues. J'ai accepté toutes les corrections d'orthographe et la moitié des coupures de phrases.
+
+### Prompt 3
+> Comment je peux expliquer le protocole HMAC simplement à quelqu'un qui n'a jamais touché à la crypto ?
+
+L'IA a proposé une analogie avec un "cachet de cire" : l'expéditeur appose un cachet calculé à partir d'un secret, le destinataire vérifie en recalculant le même cachet de son côté. Je n'ai pas utilisé l'analogie au final dans la doc finale, mais elle m'a aidé à reformuler ma propre explication.
+
+### Prompt 4
+> Donne-moi les normes ISO et référentiels qui s'appliquent à un projet web back-end avec auth et messagerie, pour que je puisse les citer dans un rapport qualité.
+
+L'IA a listé ISO/IEC 25010 (qualité produit), OWASP Top 10 (sécurité applicative), RGPD (données personnelles), PSR-12 (style PHP), Google Java Style (style Java), et Conventional Commits (lisibilité Git). J'ai recoupé avec ce qu'on faisait réellement dans le projet et gardé celles qui s'appliquaient.
+
+### Prompt 5
+> Restructure cette FAQ technique pour qu'elle soit plus facile à parcourir, sans changer les solutions proposées.
+
+L'IA a proposé de regrouper les problèmes par catégorie (Windows, base de données, CI, réseau). J'ai préféré garder un ordre simple problème-par-problème en gras pour que la lecture reste linéaire.
+
+---
+
+En résumé, l'IA m'a servi d'éditeur, pas de rédacteur. Le contenu reste mon travail, validé contre le code et les outils réellement utilisés dans le projet.
